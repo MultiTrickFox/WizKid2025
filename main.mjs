@@ -15,6 +15,7 @@ const db_wiz = mongo_db.collection('wiz');
 
 app.use('/static', express.static(process.cwd()+'/static'))
 app.get('/', (req, res) => res.sendFile(process.cwd()+'/index.html'))
+app.get('/test.html', (req, res) => res.sendFile(process.cwd()+'/test.html'))
 app.get('/backend.js', (req, res) => res.sendFile(process.cwd()+'/backend.js'))
 
 //

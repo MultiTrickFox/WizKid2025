@@ -11,11 +11,8 @@ async function request_helper(method, endpoint, headers={}, body=null) {
     Object.entries(headers).forEach(([key, value]) => { xhr.setRequestHeader(key, value) })
     if (body) { xhr.setRequestHeader('Content-Type', 'application/json') }
     xhr.onload = () => {
-        try {
-            result = JSON.parse(xhr.responseText)
-        } catch (error) {
-            result = { error: 'Failed to parse response', raw: xhr.responseText }
-        }
+        try { result = JSON.parse(xhr.responseText) }
+		catch (error) { result = { error: 'Failed to parse response', raw: xhr.responseText } }
     }
     xhr.onerror = () => {
         result = { error: 'Request failed', status: xhr.status };
