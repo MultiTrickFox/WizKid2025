@@ -33,3 +33,9 @@ The default users are:
 `main.mjs` is the backend
 `backend.js` is the middle-end for purely HTML importable functions.
 `index.html` and `test.html` are purely HTML - CSS - JS with Tailwind.
+
+# Unique Idea
+Let all wizkids have a personalizable "About Me" that is multidimensional, not just work related.
+We can input their **Past Projects** , **Personality Traits** , **Unique Design Aspects** etc
+Then an incoming guest/customer could openly search **Which Wizkid They Want to Connect With**
+Or even better, they can just input their **Company URL** and we intelligently parse who could fit them best.
