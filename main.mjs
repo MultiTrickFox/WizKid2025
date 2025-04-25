@@ -272,7 +272,7 @@ ${descriptions}
         }
 
         const data = await response.json();
-		console.log("ClosedAI Output:",data.choices[0].message.content)
+        console.log("ClosedAI Output:",data.choices[0].message.content)
         const matchIndex = parseInt(data.choices[0].message.content.match(/\d+/)?.[0]);
         const bestMatch = wizkids[matchIndex];
 
@@ -406,7 +406,6 @@ app.post('/create_wizkid', async (req, res) => {
             ProfilePicture: ProfilePicture || defaultProfilePicture,
             Description: Description || '',
             Entry: new Date().toISOString(),
-            Exit: null,
             updatedAt: new Date().toISOString()
         };
 
@@ -421,7 +420,7 @@ app.post('/create_wizkid', async (req, res) => {
 // Setup default collection with users
 async function setupDefaultCollection() {
 
-	const defaultProfilePicture = 'https://images.unsplash.com/photo-1725958789276-5fcdabb0a8ca?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Zm94fGVufDB8fDB8fHww';
+    const defaultProfilePicture = 'https://images.unsplash.com/photo-1725958789276-5fcdabb0a8ca?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Zm94fGVufDB8fDB8fHww';
 
     try {
         const db = mongo_db;
@@ -448,7 +447,6 @@ async function setupDefaultCollection() {
             ProfilePicture: defaultProfilePicture,
             Description: 'As the lead administrator, I oversee the entire Wizkid platform, managing user accounts and ensuring smooth operations. With a background in software engineering and project management, I specialize in coordinating teams, resolving technical issues, and implementing scalable solutions. My passion for technology drives me to foster a collaborative environment where innovation thrives.',
             Entry: now,
-            Exit: null,
             updatedAt: now
         };
 
@@ -464,7 +462,6 @@ async function setupDefaultCollection() {
                 ProfilePicture: 'https://images.unsplash.com/photo-1595871465907-19020bb76ad1?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxjb2xsZWN0aW9uLXBhZ2V8Mnw5NDUyNDk0fHxlbnwwfHx8fHw%3D',
                 Description: 'Alice is a senior full-stack developer with over 7 years of experience in building web applications. Proficient in JavaScript, React, and Node.js, she excels at creating scalable APIs and user-friendly interfaces. Her recent projects include a real-time collaboration tool and a machine learning dashboard. Outside work, Alice enjoys mentoring junior developers and contributing to open-source projects.',
                 Entry: now,
-                Exit: null,
                 updatedAt: now
             },
             {
@@ -477,7 +474,6 @@ async function setupDefaultCollection() {
                 ProfilePicture: 'https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxjb2xsZWN0aW9uLXBhZ2V8MTR8OTQ1MjQ5NHx8ZW58MHx8fHx8',
                 Description: 'Bob is a creative UI/UX designer with a knack for crafting intuitive and visually appealing interfaces. With expertise in Figma, Adobe XD, and Tailwind CSS, he has designed user experiences for mobile apps and web platforms. Bob’s recent work includes a responsive e-commerce dashboard and a minimalist portfolio site. In his free time, he explores typography and color theory.',
                 Entry: now,
-                Exit: null,
                 updatedAt: now
             },
             {
@@ -503,7 +499,6 @@ async function setupDefaultCollection() {
                 ProfilePicture: 'https://images.unsplash.com/photo-1575439462433-8e1969065df7?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxjb2xsZWN0aW9uLXBhZ2V8MjB8OTQ1MjQ5NHx8ZW58MHx8fHx8',
                 Description: 'Diana is an experienced backend developer specializing in microservices and cloud architecture. With proficiency in Python, Docker, and AWS, she has built robust APIs for fintech applications. Her recent project involved integrating a payment gateway with real-time fraud detection. Diana is an advocate for clean code and frequently speaks at tech conferences.',
                 Entry: now,
-                Exit: null,
                 updatedAt: now
             },
             {
@@ -516,7 +511,6 @@ async function setupDefaultCollection() {
                 ProfilePicture: 'https://images.unsplash.com/photo-1550246140-29f40b909e5a?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxjb2xsZWN0aW9uLXBhZ2V8MjZ8OTQ1MjQ5NHx8ZW58MHx8fHx8',
                 Description: 'Evan is a data scientist with a PhD in machine learning, focusing on predictive analytics and natural language processing. Using Python, TensorFlow, and SQL, he has developed models for customer segmentation and sentiment analysis. His current project involves building a recommendation engine for a content platform. Evan enjoys teaching data science workshops.',
                 Entry: now,
-                Exit: null,
                 updatedAt: now
             },
             {
@@ -529,7 +523,6 @@ async function setupDefaultCollection() {
                 ProfilePicture: 'https://images.unsplash.com/photo-1557053910-d9eadeed1c58?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxjb2xsZWN0aW9uLXBhZ2V8MTB8OTQ1MjQ5NHx8ZW58MHx8fHx8',
                 Description: 'Fiona is a product manager with a background in software development and business strategy. She excels at bridging technical and business teams to deliver user-centric products. Her recent work includes launching a SaaS platform for small businesses. Fiona is skilled in Agile methodologies and enjoys analyzing market trends to inform product roadmaps.',
                 Entry: now,
-                Exit: null,
                 updatedAt: now
             }
         ];
