@@ -85,6 +85,9 @@
         // Default profile picture URL
         const defaultProfilePicture = 'https://images.unsplash.com/photo-1725958789276-5fcdabb0a8ca?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Zm94fGVufDB8fDB8fHww';
 
+        // CORS proxy to bypass image loading issues
+        const corsProxy = 'https://corsproxy.io/?';
+
         // Authenticate user and determine role
         async function authenticateUser(username, password) {
             try {
@@ -182,10 +185,20 @@
             }
         }
 
+        // Handle image load error
+        function handleImageError(img) {
+            console.warn(`Failed to load image: ${img.src}, falling back to default`);
+            img.src = defaultProfilePicture;
+        }
+
         // Render wizkids as cards
-        function renderWizkids(wizkids) {
+        function renderWizkids(data) {
             output.innerHTML = ''; // Clear output
-            if (!wizkids || wizkids.length === 0) {
+
+            // Normalize input to array
+            const wizkids = Array.isArray(data) ? data : data && typeof data === 'object' ? [data] : [];
+
+            if (!wizkids.length) {
                 output.textContent = 'No wizkids found';
                 return;
             }
@@ -194,6 +207,10 @@
             grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
 
             wizkids.forEach((wizkid, index) => {
+                if (!wizkid) return; // Skip null/undefined entries
+                const profilePicture = isValidUrl(wizkid.ProfilePicture) ? corsProxy + encodeURIComponent(wizkid.ProfilePicture) : defaultProfilePicture;
+                console.log(`Rendering wizkid ${wizkid.Name || 'Unknown'} with ProfilePicture: ${profilePicture}`);
+
                 const card = document.createElement('div');
                 card.className = 'bg-white shadow-md rounded-lg p-4';
 
@@ -204,7 +221,7 @@
 
                 card.innerHTML = `
                     <div class="flex items-center mb-4">
-                        <img src="${wizkid.ProfilePicture || defaultProfilePicture}" alt="${wizkid.Name}'s profile picture" class="h-24 w-24 rounded-full object-cover mr-4" onerror="this.src='${defaultProfilePicture}'">
+                        <img src="${profilePicture}" alt="${wizkid.Name || 'Unknown'}'s profile picture" class="h-24 w-24 rounded-full object-cover mr-4" onload="console.log('Image loaded: ${this.src}')" onerror="handleImageError(this)">
                         <div>
                             <h3 class="text-xl font-bold">${wizkid.Name || 'Unknown'}</h3>
                             ${userState.role !== 'guest' ? `<p class="text-gray-600">${wizkid.Role || 'No role'}</p>` : ''}
@@ -242,7 +259,11 @@
         async function executeApiCall(label, apiFn) {
             try {
                 const result = await apiFn();
-                if (label === 'View Wizkids') {
+                if (result.error) {
+                    output.textContent = `${label}:\nError: ${result.error}\n\n`;
+                    return;
+                }
+                if (label === 'View Wizkids' || label === 'Search Wizkids') {
                     renderWizkids(result);
                 } else {
                     output.textContent = `${label}:\n${JSON.stringify(result, null, 2)}\n\n`;
