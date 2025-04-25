@@ -1,7 +1,7 @@
+import fetch from 'node-fetch';
 import express from 'express';
 import mongodb from 'mongodb';
 import dotenv from 'dotenv';
-import axios from 'axios';
 import cors from 'cors';
 
 // Load environment variables
@@ -255,21 +255,24 @@ Descriptions:
 ${descriptions}
 `;
 
-        const gptResponse = await axios.post(
-            'https://api.openai.com/v1/chat/completions',
-            {
-                model: 'gpt-4',
-                messages: [{ role: 'user', content: prompt }],
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.openai_key}`
             },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.openai_key}`
-                }
-            }
-        );
+            body: JSON.stringify({
+                model: 'gpt-4',
+                messages: [{ role: 'user', content: prompt }]
+            })
+        });
 
-        const matchIndex = parseInt(gptResponse.data.choices[0].message.content.match(/\d+/)?.[0]);
+        if (!response.ok) {
+            throw new Error(`OpenAI API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const matchIndex = parseInt(data.choices[0].message.content.match(/\d+/)?.[0]);
         const bestMatch = wizkids[matchIndex];
 
         if (!bestMatch) {
