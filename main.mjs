@@ -13,41 +13,6 @@ const db_wiz = mongo_db.collection('wiz');
 
 //
 
-
-let _=`
-
-Each entry in the 'wiz' collection has the following structure:
-
-- User - string
-- Pass - string
-- Name - string
-- Type - string - admin/wizkid
-- Role - string - boss/developer/designer/intern
-- Email - string
-- Profile picture - string base64
-- Persona picture - string base64
-- Entry - string - date of addition
-- Exit - string - date of firing
-
-
-
-
-Ideas:
-
-- Give a free flow "Description" field, then given a "Query" the LLM can search for it across everyone
-
-- Given the free flow "Description" field, we create the image for you, the Persona picture :)
-
-
-
-
-
-
-`
-
-
-//
-
 app.use('/static', express.static(process.cwd()+'/static'))
 app.get('/', (req, res) => res.sendFile(process.cwd()+'/index.html'))
 
@@ -62,9 +27,7 @@ app.get('/view_wizkids', async (req, res) => {
 
         if (req.headers['user'] && req.headers['pass']) {
             let authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
-            if (!authUser) {
-                throw new Error('Invalid credentials');
-            }
+            if (!authUser) { throw new Error('Invalid credentials'); }
             userType = authUser.Type;
         }
 
@@ -220,6 +183,101 @@ app.post('/unfire_wizkid', async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 });
+
+
+//
+
+
+async function setupDefaultCollection() {
+    let mongo_client;
+    try {
+        // Connect to MongoDB
+        mongo_client = new mongodb.MongoClient(process.env.mongo_connect);
+        await mongo_client.connect();
+        console.log('Connected to MongoDB');
+
+        const db = mongo_client.db('main');
+        const wiz_collection = db.collection('wiz');
+
+        // Ensure unique index on User field
+        await wiz_collection.createIndex({ User: 1 }, { unique: true });
+
+        // Admin user
+        const admin = {
+            User: 'admin',
+            Pass: 'wowow', // TODO: Hash with bcrypt in production
+            Name: 'Admin User',
+            Type: 'admin',
+            Role: 'boss',
+            Email: 'admin@company.com',
+            ProfilePicture: placeholderProfilePicture,
+            Entry: new Date().toISOString(),
+            Exit: null
+        };
+
+        // Wizkid users
+        const wizkids = [
+            {
+                User: 'wizkid1',
+                Pass: 'pass123',
+                Name: 'Alice Smith',
+                Type: 'wizkid',
+                Role: 'developer',
+                Email: 'alice.smith@company.com',
+                ProfilePicture: placeholderProfilePicture,
+                Entry: new Date('2025-01-01').toISOString(),
+                Exit: null
+            },
+            {
+                User: 'wizkid2',
+                Pass: 'pass456',
+                Name: 'Bob Johnson',
+                Type: 'wizkid',
+                Role: 'designer',
+                Email: 'bob.johnson@company.com',
+                ProfilePicture: placeholderProfilePicture,
+                Entry: new Date('2025-02-01').toISOString(),
+                Exit: null
+            },
+            {
+                User: 'wizkid3',
+                Pass: 'pass789',
+                Name: 'Charlie Brown',
+                Type: 'wizkid',
+                Role: 'intern',
+                Email: 'charlie.brown@company.com',
+                ProfilePicture: placeholderProfilePicture,
+                Entry: new Date('2025-03-01').toISOString(),
+                Exit: new Date('2025-04-01').toISOString() // Example of a fired wizkid
+            }
+        ];
+
+        // Insert admin user
+        const adminResult = await wiz_collection.insertOne(admin);
+        console.log(`Inserted admin user with _id: ${adminResult.insertedId}`);
+
+        // Insert wizkids
+        const wizkidsResult = await wiz_collection.insertMany(wizkids);
+        console.log(`Inserted ${wizkidsResult.insertedCount} wizkids`);
+
+        // Verify inserted documents
+        const allUsers = await wiz_collection.find({}).toArray();
+        console.log('All users in wiz collection:', allUsers);
+
+    } catch (error) {
+        console.error('Error setting up wiz collection:', error);
+        throw error;
+    } finally {
+        // Close the MongoDB connection
+        if (mongo_client) {
+            await mongo_client.close();
+            console.log('MongoDB connection closed');
+        }
+    }
+}
+
+setupDefaultCollection()
+
 
 //
 
