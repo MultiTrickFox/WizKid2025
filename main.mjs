@@ -354,8 +354,8 @@ async function setupDefaultCollection() {
         const wiz_collection = db.collection('wiz');
 
         // Clear existing data (optional, comment out if not needed)
-        // await wiz_collection.deleteMany({});
-        // console.log('Cleared wiz collection');
+        await wiz_collection.deleteMany({});
+        console.log('Cleared wiz collection');
 
         // Ensure unique index on User field
         await wiz_collection.createIndex({ User: 1 }, { unique: true });
