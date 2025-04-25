@@ -272,6 +272,7 @@ ${descriptions}
         }
 
         const data = await response.json();
+		console.log("ClosedAI Output:",data.choices[0].message.content)
         const matchIndex = parseInt(data.choices[0].message.content.match(/\d+/)?.[0]);
         const bestMatch = wizkids[matchIndex];
 
