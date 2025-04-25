@@ -222,7 +222,8 @@ app.post('/unfire_wizkid', async (req, res) => {
 });
 
 // 7) Search wizkids by description (POST /search_wizkids)
-// 7) Search wizkids by description (POST /search_wizkids)
+const axios = require('axios');
+
 app.post('/search_wizkids', async (req, res) => {
     try {
         let userType = 'guest';
@@ -244,50 +245,34 @@ app.post('/search_wizkids', async (req, res) => {
 
         // Get all users
         const wizkids = await db_wiz.find({}).toArray();
-        if (!wizkids.length) {
-            return res.status(404).json({ error: 'No wizkids found' });
-        }
 
-        // Prepare OpenAI API request
-        const descriptions = wizkids.map(wizkid => ({
-            User: wizkid.User,
-            Description: wizkid.Description || ''
-        }));
+        // Use GPT to find best matching wizkid
+        const descriptions = wizkids.map((w, i) => `#${i}: ${w.Description || 'No description'}`).join('\n');
 
-        const prompt = `Given the query "${query}", select the wizkid whose description best matches the query based on semantic relevance. Here are the wizkids:\n${JSON.stringify(descriptions, null, 2)}\nReturn only a JSON object with the User field, e.g., {"User": "wizkid1"}.`;
+        const prompt = `
+You are an intelligent assistant. Based on the following list of numbered wizkid descriptions, return the number of the one that best matches this query: "${query}". Respond with only the number, nothing else.
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.openai_key}`
+Descriptions:
+${descriptions}
+`;
+
+        const gptResponse = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: 'gpt-4',
+                messages: [{ role: 'user', content: prompt }],
             },
-            body: JSON.stringify({
-                model: 'gpt-4o',
-                messages: [
-                    { role: 'system', content: 'You are a precise assistant that returns only valid JSON.' },
-                    { role: 'user', content: prompt }
-                ],
-                temperature: 0.3 // Lower temperature for consistent JSON output
-            })
-        });
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.openai_key}`
+                }
+            }
+        );
 
-        if (!response.ok) {
-            throw new Error(`OpenAI API error: ${response.statusText}`);
-        }
+        const matchIndex = parseInt(gptResponse.data.choices[0].message.content.match(/\d+/)?.[0]);
+        const bestMatch = wizkids[matchIndex];
 
-        const result = await response.json();
-        let bestMatchUser;
-        try {
-            const content = result.choices[0].message.content.trim();
-            bestMatchUser = JSON.parse(content).User;
-        } catch (error) {
-            console.error('OpenAI response:', result);
-            throw new Error('Invalid response format from OpenAI');
-        }
-
-        // Find the wizkid by User
-        const bestMatch = wizkids.find(wizkid => wizkid.User === bestMatchUser);
         if (!bestMatch) {
             return res.status(404).json({ error: 'No matching wizkid found' });
         }
@@ -304,10 +289,10 @@ app.post('/search_wizkids', async (req, res) => {
             });
         }
     } catch (error) {
-        console.error('Search error:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
+
 // app.post('/search_wizkids', async (req, res) => {
 //     try {
 //         let userType = 'guest';
