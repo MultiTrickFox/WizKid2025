@@ -1,13 +1,21 @@
 import express from 'express';
 import mongodb from 'mongodb';
+import dotenv from 'dotenv';
+import cors from 'cors';
 
-//
+// Load environment variables
+dotenv.config();
+
+if (!process.env.mongo_connect) {
+    throw new Error('MONGO_CONNECT environment variable is not defined');
+}
 
 // Initialize Express app
 const app = express();
 app.use(express.json());
+app.use(cors()); // Enable CORS for browser-based testing
 
-// MongoDB connection
+// Single MongoDB client instance
 const mongo_client = new mongodb.MongoClient(process.env.mongo_connect);
 await mongo_client.connect();
 const mongo_db = mongo_client.db('main');
@@ -62,6 +70,14 @@ app.put('/update_wizkid', async (req, res) => {
         let { wizkidUser, ...updateData } = req.body;
         if (!wizkidUser) {
             return res.status(400).json({ error: 'wizkidUser is required' });
+        }
+
+        // Check ProfilePicture size if provided
+        if (updateData.ProfilePicture) {
+            const base64Size = Buffer.from(updateData.ProfilePicture, 'base64').length;
+            if (base64Size > 1 * 1024 * 1024) {
+                return res.status(400).json({ error: 'Profile picture exceeds 1MB limit' });
+            }
         }
 
         let result = await db_wiz.updateOne(
@@ -207,7 +223,10 @@ app.post('/search_wizkids', async (req, res) => {
         // Authenticate user
         if (req.headers['user'] && req.headers['pass']) {
             let authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
-            if (authUser) userType = authUser.Type;
+            if (!authUser) {
+                return res.status(401).json({ error: 'Invalid credentials' });
+            }
+            userType = authUser.Type;
         }
 
         // Validate query
@@ -258,41 +277,102 @@ app.post('/search_wizkids', async (req, res) => {
     }
 });
 
-
-//
-
-
-async function setupDefaultCollection() {
-    let mongo_client;
+// 8) Admin create wizkid (POST /create_wizkid)
+app.post('/create_wizkid', async (req, res) => {
     try {
-        // Connect to MongoDB
-        mongo_client = new mongodb.MongoClient(process.env.mongo_connect);
-        await mongo_client.connect();
-        console.log('Connected to MongoDB');
+        // Authenticate admin
+        let authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
+        if (!authUser || authUser.Type !== 'admin') {
+            return res.status(403).json({ error: 'Only admins can create wizkids' });
+        }
 
-        const db = mongo_client.db('main');
+        // Extract and validate input
+        const { User, Pass, Name, Type, Role, Email, ProfilePicture, Description } = req.body;
+
+        // Required fields
+        if (!User || !Pass || !Name || !Type || !Role || !Email) {
+            return res.status(400).json({ error: 'User, Pass, Name, Type, Role, and Email are required' });
+        }
+
+        // Validate Type
+        if (Type !== 'wizkid') {
+            return res.status(400).json({ error: 'Type must be "wizkid"' });
+        }
+
+        // Validate Email format
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email)) {
+            return res.status(400).json({ error: 'Invalid Email format' });
+        }
+
+        // Check if User already exists
+        const existingUser = await db_wiz.findOne({ User });
+        if (existingUser) {
+            return res.status(400).json({ error: 'User already exists' });
+        }
+
+        // Check ProfilePicture size if provided
+        if (ProfilePicture) {
+            const base64Size = Buffer.from(ProfilePicture, 'base64').length;
+            if (base64Size > 1 * 1024 * 1024) {
+                return res.status(400).json({ error: 'Profile picture exceeds 1MB limit' });
+            }
+        }
+
+        // Create new wizkid
+        const newWizkid = {
+            User,
+            Pass, // TODO: Hash with bcrypt in production
+            Name,
+            Type,
+            Role,
+            Email,
+            ProfilePicture: ProfilePicture || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==',
+            Description: Description || '',
+            Entry: new Date().toISOString(),
+            Exit: null,
+            updatedAt: new Date().toISOString()
+        };
+
+        const result = await db_wiz.insertOne(newWizkid);
+
+        res.status(201).json({ success: true, message: 'Wizkid created successfully', user: User });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Setup default collection with users
+async function setupDefaultCollection() {
+    try {
+        const db = mongo_db;
         const wiz_collection = db.collection('wiz');
 
-        // Clear existing data (so we hard reset)
-        await wiz_collection.deleteMany({});
-        console.log('Cleared wiz collection');
+        // Clear existing data (optional, comment out if not needed)
+        // await wiz_collection.deleteMany({});
+        // console.log('Cleared wiz collection');
 
+        // Ensure unique index on User field
+        await wiz_collection.createIndex({ User: 1 }, { unique: true });
 
         // Placeholder Base64 for a 1x1 pixel image
         const placeholderProfilePicture = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
 
+        // Current timestamp for Entry
+        const now = new Date().toISOString();
+
         // Admin user
         const admin = {
             User: 'admin',
-            Pass: 'wowow',
+            Pass: 'wowow', // TODO: Hash with bcrypt in production
             Name: 'Admin User',
             Type: 'admin',
             Role: 'boss',
             Email: 'admin@company.com',
             ProfilePicture: placeholderProfilePicture,
             Description: 'As the lead administrator, I oversee the entire Wizkid platform, managing user accounts and ensuring smooth operations. With a background in software engineering and project management, I specialize in coordinating teams, resolving technical issues, and implementing scalable solutions. My passion for technology drives me to foster a collaborative environment where innovation thrives.',
-            Entry: new Date().toISOString(),
-            Exit: null
+            Entry: now,
+            Exit: null,
+            updatedAt: now
         };
 
         // Wizkid users
@@ -306,8 +386,9 @@ async function setupDefaultCollection() {
                 Email: 'alice.smith@company.com',
                 ProfilePicture: placeholderProfilePicture,
                 Description: 'Alice is a senior full-stack developer with over 7 years of experience in building web applications. Proficient in JavaScript, React, and Node.js, she excels at creating scalable APIs and user-friendly interfaces. Her recent projects include a real-time collaboration tool and a machine learning dashboard. Outside work, Alice enjoys mentoring junior developers and contributing to open-source projects.',
-                Entry: new Date('2025-01-01').toISOString(),
-                Exit: null
+                Entry: now,
+                Exit: null,
+                updatedAt: now
             },
             {
                 User: 'wizkid2',
@@ -318,8 +399,9 @@ async function setupDefaultCollection() {
                 Email: 'bob.johnson@company.com',
                 ProfilePicture: placeholderProfilePicture,
                 Description: 'Bob is a creative UI/UX designer with a knack for crafting intuitive and visually appealing interfaces. With expertise in Figma, Adobe XD, and Tailwind CSS, he has designed user experiences for mobile apps and web platforms. Bob’s recent work includes a responsive e-commerce dashboard and a minimalist portfolio site. In his free time, he explores typography and color theory.',
-                Entry: new Date('2025-02-01').toISOString(),
-                Exit: null
+                Entry: now,
+                Exit: null,
+                updatedAt: now
             },
             {
                 User: 'wizkid3',
@@ -330,8 +412,9 @@ async function setupDefaultCollection() {
                 Email: 'charlie.brown@company.com',
                 ProfilePicture: placeholderProfilePicture,
                 Description: 'Charlie is a recent computer science graduate interning as a junior developer. Eager to learn, he has been contributing to backend services using Node.js and MongoDB. His internship project involves optimizing database queries for a user management system. Charlie is passionate about cloud computing and hopes to specialize in DevOps. He enjoys hackathons and tech meetups.',
-                Entry: new Date('2025-03-01').toISOString(),
-                Exit: new Date('2025-04-01').toISOString()
+                Entry: now,
+                Exit: now, // Fired for testing
+                updatedAt: now
             },
             {
                 User: 'wizkid4',
@@ -342,8 +425,9 @@ async function setupDefaultCollection() {
                 Email: 'diana.lee@company.com',
                 ProfilePicture: placeholderProfilePicture,
                 Description: 'Diana is an experienced backend developer specializing in microservices and cloud architecture. With proficiency in Python, Docker, and AWS, she has built robust APIs for fintech applications. Her recent project involved integrating a payment gateway with real-time fraud detection. Diana is an advocate for clean code and frequently speaks at tech conferences.',
-                Entry: new Date('2025-04-01').toISOString(),
-                Exit: null
+                Entry: now,
+                Exit: null,
+                updatedAt: now
             },
             {
                 User: 'wizkid5',
@@ -354,8 +438,9 @@ async function setupDefaultCollection() {
                 Email: 'evan.patel@company.com',
                 ProfilePicture: placeholderProfilePicture,
                 Description: 'Evan is a data scientist with a PhD in machine learning, focusing on predictive analytics and natural language processing. Using Python, TensorFlow, and SQL, he has developed models for customer segmentation and sentiment analysis. His current project involves building a recommendation engine for a content platform. Evan enjoys teaching data science workshops.',
-                Entry: new Date('2025-05-01').toISOString(),
-                Exit: null
+                Entry: now,
+                Exit: null,
+                updatedAt: now
             },
             {
                 User: 'wizkid6',
@@ -366,8 +451,9 @@ async function setupDefaultCollection() {
                 Email: 'fiona.chen@company.com',
                 ProfilePicture: placeholderProfilePicture,
                 Description: 'Fiona is a product manager with a background in software development and business strategy. She excels at bridging technical and business teams to deliver user-centric products. Her recent work includes launching a SaaS platform for small businesses. Fiona is skilled in Agile methodologies and enjoys analyzing market trends to inform product roadmaps.',
-                Entry: new Date('2025-06-01').toISOString(),
-                Exit: null
+                Entry: now,
+                Exit: null,
+                updatedAt: now
             }
         ];
 
@@ -382,25 +468,26 @@ async function setupDefaultCollection() {
         // Verify inserted documents
         const allUsers = await wiz_collection.find({}).toArray();
         console.log('All users in wiz collection:', allUsers);
-
     } catch (error) {
         console.error('Error setting up wiz collection:', error);
         throw error;
-    } finally {
-        if (mongo_client) {
-            await mongo_client.close();
-            console.log('MongoDB connection closed');
-        }
     }
 }
 
-setupDefaultCollection().catch(error => {
-    console.log('Setup already ran before. Not running it again.');
-    process.exit(1);
-});
+// Uncomment to run setup (only needed once)
+// setupDefaultCollection().catch(error => {
+//     console.error('Setup failed:', error);
+//     process.exit(1);
+// });
 
-//
-
+// Start server
 app.listen(3000, () => {
     console.log(`Server running on port ${3000}`);
+});
+
+// Close MongoDB connection on process exit
+process.on('SIGINT', async () => {
+    await mongo_client.close();
+    console.log('MongoDB connection closed');
+    process.exit(0);
 });

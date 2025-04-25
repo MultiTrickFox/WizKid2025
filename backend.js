@@ -3,7 +3,7 @@ function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));
 }
 
-// Base URL for the API
+// Base URL for the API (no trailing slash)
 const BASE_URL = 'https://run-fox-run-q28ow.ondigitalocean.app';
 
 // Generic function to send an XMLHttpRequest and return the parsed response
@@ -74,14 +74,14 @@ async function ViewWizkids(user = '', pass = '') {
 }
 
 // 2) PUT /update_wizkid (admin only)
-async function UpdateWizkid(user = ADMIN_USER, pass = ADMIN_PASS, wizkidUser = USER1, updateData = { email: 'changed@gmail.com' }) {
+async function UpdateWizkid(user = ADMIN_USER, pass = ADMIN_PASS, wizkidUser = USER1, updateData = { Email: 'changed@gmail.com' }) {
     const headers = { 'user': user, 'pass': pass };
     const body = { wizkidUser, ...updateData };
     return await request_helper('PUT', 'update_wizkid', headers, body);
 }
 
 // 3) PUT /update_own_info (wizkid only)
-async function UpdateOwnInfo(user = USER2, pass = PASS2, updateData = { name: 'CallMeWhite' }) {
+async function UpdateOwnInfo(user = USER2, pass = PASS2, updateData = { Name: 'CallMeWhite' }) {
     const headers = { 'user': user, 'pass': pass };
     return await request_helper('PUT', 'update_own_info', headers, updateData);
 }
@@ -114,6 +114,21 @@ async function SearchWizkids(user = '', pass = '', query = 'developer') {
     return await request_helper('POST', 'search_wizkids', headers, body);
 }
 
+// 8) POST /create_wizkid (admin only)
+async function CreateWizkid(user = ADMIN_USER, pass = ADMIN_PASS, wizkidData = {
+    User: 'wizkid7',
+    Pass: 'pass123',
+    Name: 'Grace Kim',
+    Type: 'wizkid',
+    Role: 'developer',
+    Email: 'grace.kim@company.com',
+    ProfilePicture: '',
+    Description: 'Grace is a junior developer with expertise in React and TypeScript.'
+}) {
+    const headers = { 'user': user, 'pass': pass };
+    return await request_helper('POST', 'create_wizkid', headers, wizkidData);
+}
+
 // Example usage (for testing in browser console or Node.js)
 async function runTests() {
     console.log('Running tests...');
@@ -129,13 +144,13 @@ async function runTests() {
 
     // Test 4: Update wizkid (admin)
     console.log('UpdateWizkid:', await UpdateWizkid(ADMIN_USER, ADMIN_PASS, USER1, {
-        email: 'updated.wizkid1@example.com',
+        Email: 'updated.wizkid1@example.com',
         Description: 'Updated description for Alice, a skilled full-stack developer.'
     }));
 
     // Test 5: Update own info (wizkid)
     console.log('UpdateOwnInfo:', await UpdateOwnInfo(USER2, PASS2, {
-        name: 'Bob Updated',
+        Name: 'Bob Updated',
         Description: 'Updated description for Bob, a creative UI/UX designer.'
     }));
 
@@ -154,8 +169,20 @@ async function runTests() {
     // Test 10: Search wizkids as admin
     console.log('SearchWizkids (Admin):', await SearchWizkids(ADMIN_USER, ADMIN_PASS, 'UI/UX'));
 
+    // Test 11: Create wizkid (admin)
+    console.log('CreateWizkid:', await CreateWizkid(ADMIN_USER, ADMIN_PASS, {
+        User: 'wizkid7',
+        Pass: 'pass123',
+        Name: 'Grace Kim',
+        Type: 'wizkid',
+        Role: 'developer',
+        Email: 'grace.kim@company.com',
+        ProfilePicture: '',
+        Description: 'Grace is a junior developer with expertise in React and TypeScript.'
+    }));
+
     console.log('Tests completed.');
 }
 
-// Run tests (uncomment to execute) -> no need. Just go to /test.html to see the results better/
+// Run tests (uncomment to execute)
 // runTests();

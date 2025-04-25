@@ -122,25 +122,25 @@
             return div;
         }
 
-        // Create textarea for description
+        // Create textarea for Description
         function createTextarea(id, label) {
             const div = document.createElement('div');
             div.className = 'mb-2';
             div.innerHTML = `
                 <label for="${id}" class="block text-sm font-medium text-gray-700">${label}</label>
-                <textarea id="${id}" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" placeholder="Enter description"></textarea>
+                <textarea id="${id}" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" placeholder="Enter Description"></textarea>
             `;
             return div;
         }
 
         // Create select dropdown
-        function createSelect(id, label, options) {
+        function createSelect(id, label, options, defaultText = 'Select a user') {
             const div = document.createElement('div');
             div.className = 'mb-2';
             div.innerHTML = `
                 <label for="${id}" class="block text-sm font-medium text-gray-700">${label}</label>
                 <select id="${id}" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="" disabled selected>Select a user</option>
+                    <option value="" disabled selected>${defaultText}</option>
                     ${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
                 </select>
             `;
@@ -162,6 +162,12 @@
                 const result = await apiFn();
                 output.textContent = `${label}:\n${JSON.stringify(result, null, 2)}\n\n`;
                 console.log(`${label}:`, result);
+                // Refresh wizkids list after create/delete
+                if ((label === 'Create Wizkid' || label === 'Delete Wizkid') && result.success) {
+                    const wizkids = await ViewWizkids(userState.username, userState.password);
+                    userState.wizkids = wizkids.map(user => user.User).filter(user => user !== userState.username);
+                    renderPanel();
+                }
             } catch (error) {
                 output.textContent = `${label}:\nError: ${error.message}\n\n`;
                 console.error(`${label} failed:`, error);
@@ -218,26 +224,26 @@
                         label: 'Update Own Info',
                         render: () => {
                             const form = document.createElement('div');
-                            form.appendChild(createInput('update-own-name', 'Name', 'text', 'Enter new name'));
-                            form.appendChild(createInput('update-own-email', 'Email', 'email', 'Enter new email'));
-                            form.appendChild(createTextarea('update-own-description', 'Description'));
-                            form.appendChild(createInput('update-own-picture', 'Profile Picture', 'text', 'Enter Base64 image'));
+                            form.appendChild(createInput('update-own-Name', 'Name', 'text', 'Enter new Name'));
+                            form.appendChild(createInput('update-own-Email', 'Email', 'email', 'Enter new Email'));
+                            form.appendChild(createTextarea('update-own-Description', 'Description'));
+                            form.appendChild(createInput('update-own-ProfilePicture', 'Profile Picture', 'text', 'Enter Base64 image'));
                             const button = createSubmitButton('Update');
                             button.onclick = () => {
                                 const updateData = {};
-                                const name = document.getElementById('update-own-name').value.trim();
-                                const email = document.getElementById('update-own-email').value.trim();
-                                const description = document.getElementById('update-own-description').value.trim();
-                                const picture = document.getElementById('update-own-picture').value.trim();
-                                if (name) updateData.name = name;
-                                if (email) updateData.email = email;
-                                if (description) updateData.Description = description;
-                                if (picture) {
-                                    if (!picture.startsWith('data:image/')) {
+                                const Name = document.getElementById('update-own-Name').value.trim();
+                                const Email = document.getElementById('update-own-Email').value.trim();
+                                const Description = document.getElementById('update-own-Description').value.trim();
+                                const ProfilePicture = document.getElementById('update-own-ProfilePicture').value.trim();
+                                if (Name) updateData.Name = Name;
+                                if (Email) updateData.Email = Email;
+                                if (Description) updateData.Description = Description;
+                                if (ProfilePicture) {
+                                    if (!ProfilePicture.startsWith('data:image/')) {
                                         output.textContent = 'Update Own Info:\nError: Invalid Base64 image\n\n';
                                         return;
                                     }
-                                    updateData.profilePicture = picture;
+                                    updateData.ProfilePicture = ProfilePicture;
                                 }
                                 if (Object.keys(updateData).length === 0) {
                                     output.textContent = 'Update Own Info:\nError: At least one field is required\n\n';
@@ -278,35 +284,80 @@
                         }
                     },
                     {
+                        label: 'Create Wizkid',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createInput('create-wizkid-User', 'User', 'text', 'Enter username'));
+                            form.appendChild(createInput('create-wizkid-Pass', 'Pass', 'password', 'Enter password'));
+                            form.appendChild(createInput('create-wizkid-Name', 'Name', 'text', 'Enter full name'));
+                            form.appendChild(createSelect('create-wizkid-Type', 'Type', ['wizkid'], 'Select type'));
+                            form.appendChild(createSelect('create-wizkid-Role', 'Role', ['developer', 'designer', 'intern', 'data scientist', 'product manager'], 'Select role'));
+                            form.appendChild(createInput('create-wizkid-Email', 'Email', 'email', 'Enter email'));
+                            form.appendChild(createInput('create-wizkid-ProfilePicture', 'Profile Picture', 'text', 'Enter Base64 image (optional)'));
+                            form.appendChild(createTextarea('create-wizkid-Description', 'Description'));
+                            const button = createSubmitButton('Create');
+                            button.onclick = () => {
+                                const wizkidData = {};
+                                wizkidData.User = document.getElementById('create-wizkid-User').value.trim();
+                                wizkidData.Pass = document.getElementById('create-wizkid-Pass').value.trim();
+                                wizkidData.Name = document.getElementById('create-wizkid-Name').value.trim();
+                                wizkidData.Type = document.getElementById('create-wizkid-Type').value;
+                                wizkidData.Role = document.getElementById('create-wizkid-Role').value;
+                                wizkidData.Email = document.getElementById('create-wizkid-Email').value.trim();
+                                const ProfilePicture = document.getElementById('create-wizkid-ProfilePicture').value.trim();
+                                const Description = document.getElementById('create-wizkid-Description').value.trim();
+                                if (!wizkidData.User || !wizkidData.Pass || !wizkidData.Name || !wizkidData.Type || !wizkidData.Role || !wizkidData.Email) {
+                                    output.textContent = 'Create Wizkid:\nError: All required fields (User, Pass, Name, Type, Role, Email) must be filled\n\n';
+                                    return;
+                                }
+                                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(wizkidData.Email)) {
+                                    output.textContent = 'Create Wizkid:\nError: Invalid Email format\n\n';
+                                    return;
+                                }
+                                if (ProfilePicture) {
+                                    if (!ProfilePicture.startsWith('data:image/')) {
+                                        output.textContent = 'Create Wizkid:\nError: Invalid Base64 image\n\n';
+                                        return;
+                                    }
+                                    wizkidData.ProfilePicture = ProfilePicture;
+                                }
+                                if (Description) wizkidData.Description = Description;
+                                executeApiCall('Create Wizkid', () => CreateWizkid(userState.username, userState.password, wizkidData));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    },
+                    {
                         label: 'Update Wizkid',
                         render: () => {
                             const form = document.createElement('div');
                             form.appendChild(createSelect('update-wizkid-user', 'Target Wizkid', userState.wizkids));
-                            form.appendChild(createInput('update-wizkid-name', 'Name', 'text', 'Enter new name'));
-                            form.appendChild(createInput('update-wizkid-email', 'Email', 'email', 'Enter new email'));
-                            form.appendChild(createTextarea('update-wizkid-description', 'Description'));
-                            form.appendChild(createInput('update-wizkid-picture', 'Profile Picture', 'text', 'Enter Base64 image'));
+                            form.appendChild(createInput('update-wizkid-Name', 'Name', 'text', 'Enter new Name'));
+                            form.appendChild(createInput('update-wizkid-Email', 'Email', 'email', 'Enter new Email'));
+                            form.appendChild(createTextarea('update-wizkid-Description', 'Description'));
+                            form.appendChild(createInput('update-wizkid-ProfilePicture', 'Profile Picture', 'text', 'Enter Base64 image'));
                             const button = createSubmitButton('Update');
                             button.onclick = () => {
                                 const wizkidUser = document.getElementById('update-wizkid-user').value;
                                 const updateData = {};
-                                const name = document.getElementById('update-wizkid-name').value.trim();
-                                const email = document.getElementById('update-wizkid-email').value.trim();
-                                const description = document.getElementById('update-wizkid-description').value.trim();
-                                const picture = document.getElementById('update-wizkid-picture').value.trim();
+                                const Name = document.getElementById('update-wizkid-Name').value.trim();
+                                const Email = document.getElementById('update-wizkid-Email').value.trim();
+                                const Description = document.getElementById('update-wizkid-Description').value.trim();
+                                const ProfilePicture = document.getElementById('update-wizkid-ProfilePicture').value.trim();
                                 if (!wizkidUser) {
                                     output.textContent = 'Update Wizkid:\nError: Target user is required\n\n';
                                     return;
                                 }
-                                if (name) updateData.name = name;
-                                if (email) updateData.email = email;
-                                if (description) updateData.Description = description;
-                                if (picture) {
-                                    if (!picture.startsWith('data:image/')) {
+                                if (Name) updateData.Name = Name;
+                                if (Email) updateData.Email = Email;
+                                if (Description) updateData.Description = Description;
+                                if (ProfilePicture) {
+                                    if (!ProfilePicture.startsWith('data:image/')) {
                                         output.textContent = 'Update Wizkid:\nError: Invalid Base64 image\n\n';
                                         return;
                                     }
-                                    updateData.profilePicture = picture;
+                                    updateData.ProfilePicture = ProfilePicture;
                                 }
                                 if (Object.keys(updateData).length === 0) {
                                     output.textContent = 'Update Wizkid:\nError: At least one field is required\n\n';
@@ -322,26 +373,26 @@
                         label: 'Update Own Info',
                         render: () => {
                             const form = document.createElement('div');
-                            form.appendChild(createInput('update-own-admin-name', 'Name', 'text', 'Enter new name'));
-                            form.appendChild(createInput('update-own-admin-email', 'Email', 'email', 'Enter new email'));
-                            form.appendChild(createTextarea('update-own-admin-description', 'Description'));
-                            form.appendChild(createInput('update-own-admin-picture', 'Profile Picture', 'text', 'Enter Base64 image'));
+                            form.appendChild(createInput('update-own-admin-Name', 'Name', 'text', 'Enter new Name'));
+                            form.appendChild(createInput('update-own-admin-Email', 'Email', 'email', 'Enter new Email'));
+                            form.appendChild(createTextarea('update-own-admin-Description', 'Description'));
+                            form.appendChild(createInput('update-own-admin-ProfilePicture', 'Profile Picture', 'text', 'Enter Base64 image'));
                             const button = createSubmitButton('Update');
                             button.onclick = () => {
                                 const updateData = {};
-                                const name = document.getElementById('update-own-admin-name').value.trim();
-                                const email = document.getElementById('update-own-admin-email').value.trim();
-                                const description = document.getElementById('update-own-admin-description').value.trim();
-                                const picture = document.getElementById('update-own-admin-picture').value.trim();
-                                if (name) updateData.name = name;
-                                if (email) updateData.email = email;
-                                if (description) updateData.Description = description;
-                                if (picture) {
-                                    if (!picture.startsWith('data:image/')) {
+                                const Name = document.getElementById('update-own-admin-Name').value.trim();
+                                const Email = document.getElementById('update-own-admin-Email').value.trim();
+                                const Description = document.getElementById('update-own-admin-Description').value.trim();
+                                const ProfilePicture = document.getElementById('update-own-admin-ProfilePicture').value.trim();
+                                if (Name) updateData.Name = Name;
+                                if (Email) updateData.Email = Email;
+                                if (Description) updateData.Description = Description;
+                                if (ProfilePicture) {
+                                    if (!ProfilePicture.startsWith('data:image/')) {
                                         output.textContent = 'Update Own Info:\nError: Invalid Base64 image\n\n';
                                         return;
                                     }
-                                    updateData.profilePicture = picture;
+                                    updateData.ProfilePicture = ProfilePicture;
                                 }
                                 if (Object.keys(updateData).length === 0) {
                                     output.textContent = 'Update Own Info:\nError: At least one field is required\n\n';
