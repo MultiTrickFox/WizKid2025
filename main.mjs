@@ -551,11 +551,10 @@ async function setupDefaultCollection() {
     }
 }
 
-// Uncomment to run setup (only needed once)
-// setupDefaultCollection().catch(error => {
-//     console.error('Setup failed:', error);
-//     process.exit(1);
-// });
+setupDefaultCollection().catch(error => {
+    console.error('Setup failed:', error);
+    process.exit(1);
+});
 
 // Start server
 app.listen(3000, () => {
