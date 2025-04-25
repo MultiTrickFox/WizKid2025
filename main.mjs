@@ -222,6 +222,7 @@ app.post('/unfire_wizkid', async (req, res) => {
 });
 
 // 7) Search wizkids by description (POST /search_wizkids)
+// 7) Search wizkids by description (POST /search_wizkids)
 app.post('/search_wizkids', async (req, res) => {
     try {
         let userType = 'guest';
@@ -253,17 +254,21 @@ app.post('/search_wizkids', async (req, res) => {
             Description: wizkid.Description || ''
         }));
 
-        const prompt = `Given the query "${query}", select the wizkid whose description best matches the query based on semantic relevance. Here are the wizkids:\n${JSON.stringify(descriptions, null, 2)}\nReturn only the User field of the best-matching wizkid as a JSON object, e.g., {"User": "wizkid1"}.`;
+        const prompt = `Given the query "${query}", select the wizkid whose description best matches the query based on semantic relevance. Here are the wizkids:\n${JSON.stringify(descriptions, null, 2)}\nReturn only a JSON object with the User field, e.g., {"User": "wizkid1"}.`;
 
-        const response = await fetch('https://api.openai.com/v1/responses', {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${process.env.openai_key}`
             },
             body: JSON.stringify({
-                model: 'gpt-4.1',
-                input: prompt
+                model: 'gpt-4o',
+                messages: [
+                    { role: 'system', content: 'You are a precise assistant that returns only valid JSON.' },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.3 // Lower temperature for consistent JSON output
             })
         });
 
@@ -274,8 +279,10 @@ app.post('/search_wizkids', async (req, res) => {
         const result = await response.json();
         let bestMatchUser;
         try {
-            bestMatchUser = JSON.parse(result.response).User;
-        } catch {
+            const content = result.choices[0].message.content.trim();
+            bestMatchUser = JSON.parse(content).User;
+        } catch (error) {
+            console.error('OpenAI response:', result);
             throw new Error('Invalid response format from OpenAI');
         }
 
@@ -297,6 +304,7 @@ app.post('/search_wizkids', async (req, res) => {
             });
         }
     } catch (error) {
+        console.error('Search error:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
