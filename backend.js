@@ -34,118 +34,73 @@ async function request_helper(method, endpoint, headers={}, body=null) {
 
 //
 
-// 1) Test GET /view_wizkids
-async function testViewWizkids(user='', pass='') {
-    const headers = {};
-    if (user !== 'guest') {
-        headers['user'] = user;
-        headers['pass'] = pass;
-    }
-    return await request_helper('GET', '/view_wizkids', headers);
-}
 
-// 2) Test PUT /update_wizkid (admin only)
-async function testUpdateWizkid(wizkidUser, updateData) {
-    const headers = {
-        'user': ADMIN_USER,
-        'pass': ADMIN_PASS
-    };
-    const body = {
-        wizkidUser,
-        ...updateData
-    };
+const ADMIN_USER = 'admin'
+const ADMIN_PASS = 'wowow'
+
+const USER1 = 'wizkid1'
+const PASS1 = 'pass123'
+
+const USER2 = 'wizkid2'
+const PASS2 = 'pass456'
+
+
+
+// 1)  GET /view_wizkids
+
+	// As a guest
+
+async function ViewWizkids_guest(user='', pass='') {
+    return await request_helper('GET', '/view_wizkids', {user, pass});
+}; ViewWizkids_guest()
+
+	// As a wizkid
+
+async function ViewWizkids_admin(user=USER1, pass=PASS1) {
+	return await request_helper('GET', '/view_wizkids', {user, pass});
+}; ViewWizkids_admin()
+
+	// As an admin
+
+async function ViewWizkids_admin(user=ADMIN_USER, pass=ADMIN_PASS) {
+    return await request_helper('GET', '/view_wizkids', {user, pass});
+}; ViewWizkids_admin()
+
+// 2)  PUT /update_wizkid (admin only)
+
+async function UpdateWizkid(user=ADMIN_USER, pass=ADMIN_PASS, wizkidUser=USER1, updateData={'email':'changed@gmail.com'}) {
+    const headers = { 'user': user, 'pass': pass };
+    const body = { wizkidUser, ...updateData };
     return await request_helper('PUT', '/update_wizkid', headers, body);
-}
+}; UpdateWizkid()
 
-// 3) Test PUT /update_own_info (wizkid only)
-async function testUpdateOwnInfo(updateData) {
-    const headers = {
-        'user': WIZKID_USER,
-        'pass': WIZKID_PASS
-    };
+// 3)  PUT /update_own_info (wizkid only)
+
+async function UpdateOwnInfo(user=USER2, pass=PASS2, updateData={'name':'MyNameIsChangedToWhite'}) {
+    const headers = {'user': user, 'pass': pass };
     return await request_helper('PUT', '/update_own_info', headers, updateData);
-}
+}; UpdateOwnInfo()
 
-// 4) Test DELETE /delete_wizkid (admin only)
-async function testDeleteWizkid(wizkidUser) {
-    const headers = {
-        'user': ADMIN_USER,
-        'pass': ADMIN_PASS
-    };
-    const body = {
-        wizkidUser
-    };
+// 4)  DELETE /delete_wizkid (admin only)
+
+async function DeleteWizkid(user=ADMIN_USER, pass=ADMIN_PASS, wizkidUser='wizkid3') {
+    const headers = { 'user': ADMIN_USER, 'pass': ADMIN_PASS };
+    const body = { wizkidUser };
     return await request_helper('DELETE', '/delete_wizkid', headers, body);
-}
+}; DeleteWizkid()
 
-// 5) Test POST /fire_wizkid (admin only)
-async function testFireWizkid(wizkidUser) {
-    const headers = {
-        'user': ADMIN_USER,
-        'pass': ADMIN_PASS
-    };
-    const body = {
-        wizkidUser
-    };
+// 5)  POST /fire_wizkid (admin only)
+
+async function FireWizkid(user=ADMIN_USER, pass=ADMIN_PASS, wizkidUser='wizkid3') {
+    const headers = { 'user': ADMIN_USER, 'pass': ADMIN_PASS };
+    const body = { wizkidUser };
     return await request_helper('POST', '/fire_wizkid', headers, body);
-}
+}; FireWizkid()
 
-// 6) Test POST /unfire_wizkid (admin only)
-async function testUnfireWizkid(wizkidUser) {
-    const headers = {
-        'user': ADMIN_USER,
-        'pass': ADMIN_PASS
-    };
-    const body = {
-        wizkidUser
-    };
+// 6)  POST /unfire_wizkid (admin only)
+
+async function UnfireWizkid(user=ADMIN_USER, pass=ADMIN_PASS, wizkidUser='wizkid3') {
+    const headers = { 'user': ADMIN_USER, 'pass': ADMIN_PASS };
+    const body = { wizkidUser };
     return await request_helper('POST', '/unfire_wizkid', headers, body);
-}
-
-// Example usage (can be called in a browser console or Node.js environment with XMLHttpRequest)
-async function runTests() {
-    console.log('Running tests...');
-
-    // Test 1: View wizkids as guest
-    console.log('Test 1: View wizkids as guest');
-    console.log(await testViewWizkids());
-
-    // Test 2: View wizkids as admin
-    console.log('Test 2: View wizkids as admin');
-    console.log(await testViewWizkids(ADMIN_USER, ADMIN_PASS));
-
-    // Test 3: View wizkids as wizkid
-    console.log('Test 3: View wizkids as wizkid');
-    console.log(await testViewWizkids(WIZKID_USER, WIZKID_PASS));
-
-    // Test 4: Update wizkid info (admin)
-    console.log('Test 4: Update wizkid info');
-    console.log(await testUpdateWizkid(WIZKID_USER, {
-        Name: 'Updated Wizkid Name',
-        Email: 'updated.wizkid@example.com'
-    }));
-
-    // Test 5: Update own info (wizkid)
-    console.log('Test 5: Update own info');
-    console.log(await testUpdateOwnInfo({
-        Name: 'Wizkid Self Update',
-        Email: 'self.update@example.com'
-    }));
-
-    // Test 6: Fire wizkid (admin)
-    console.log('Test 6: Fire wizkid');
-    console.log(await testFireWizkid(WIZKID_USER));
-
-    // Test 7: Unfire wizkid (admin)
-    console.log('Test 7: Unfire wizkid');
-    console.log(await testUnfireWizkid(WIZKID_USER));
-
-    // Test 8: Delete wizkid (admin)
-    console.log('Test 8: Delete wizkid');
-    console.log(await testDeleteWizkid(WIZKID_USER));
-
-    console.log('Tests completed.');
-}
-
-// Run tests (uncomment to execute)
-// runTests();
+}; UnfireWizkid()
