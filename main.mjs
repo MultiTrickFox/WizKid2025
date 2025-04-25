@@ -243,26 +243,44 @@ app.post('/search_wizkids', async (req, res) => {
 
         // Get all users
         const wizkids = await db_wiz.find({}).toArray();
-
-        // Simple keyword-matching search
-        const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
-        let bestMatch = null;
-        let maxScore = -1;
-
-        for (const wizkid of wizkids) {
-            const description = (wizkid.Description || '').toLowerCase();
-            let score = 0;
-            for (const word of queryWords) {
-                if (description.includes(word)) {
-                    score += 1; // Increment score for each matching word
-                }
-            }
-            if (score > maxScore) {
-                maxScore = score;
-                bestMatch = wizkid;
-            }
+        if (!wizkids.length) {
+            return res.status(404).json({ error: 'No wizkids found' });
         }
 
+        // Prepare OpenAI API request
+        const descriptions = wizkids.map(wizkid => ({
+            User: wizkid.User,
+            Description: wizkid.Description || ''
+        }));
+
+        const prompt = `Given the query "${query}", select the wizkid whose description best matches the query based on semantic relevance. Here are the wizkids:\n${JSON.stringify(descriptions, null, 2)}\nReturn only the User field of the best-matching wizkid as a JSON object, e.g., {"User": "wizkid1"}.`;
+
+        const response = await fetch('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.openai_key}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4.1',
+                input: prompt
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`OpenAI API error: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        let bestMatchUser;
+        try {
+            bestMatchUser = JSON.parse(result.response).User;
+        } catch {
+            throw new Error('Invalid response format from OpenAI');
+        }
+
+        // Find the wizkid by User
+        const bestMatch = wizkids.find(wizkid => wizkid.User === bestMatchUser);
         if (!bestMatch) {
             return res.status(404).json({ error: 'No matching wizkid found' });
         }
@@ -282,6 +300,66 @@ app.post('/search_wizkids', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+// app.post('/search_wizkids', async (req, res) => {
+//     try {
+//         let userType = 'guest';
+
+//         // Authenticate user
+//         if (req.headers['user'] && req.headers['pass']) {
+//             let authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
+//             if (!authUser) {
+//                 return res.status(401).json({ error: 'Invalid credentials' });
+//             }
+//             userType = authUser.Type;
+//         }
+
+//         // Validate query
+//         const { query } = req.body;
+//         if (!query || typeof query !== 'string' || query.trim().length === 0) {
+//             return res.status(400).json({ error: 'Query is required and must be a non-empty string' });
+//         }
+
+//         // Get all users
+//         const wizkids = await db_wiz.find({}).toArray();
+
+//         // Simple keyword-matching search
+//         const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+//         let bestMatch = null;
+//         let maxScore = -1;
+
+//         for (const wizkid of wizkids) {
+//             const description = (wizkid.Description || '').toLowerCase();
+//             let score = 0;
+//             for (const word of queryWords) {
+//                 if (description.includes(word)) {
+//                     score += 1; // Increment score for each matching word
+//                 }
+//             }
+//             if (score > maxScore) {
+//                 maxScore = score;
+//                 bestMatch = wizkid;
+//             }
+//         }
+
+//         if (!bestMatch) {
+//             return res.status(404).json({ error: 'No matching wizkid found' });
+//         }
+
+//         // Return data based on user type
+//         if (userType === 'admin' || userType === 'wizkid') {
+//             const { Pass, ...rest } = bestMatch;
+//             return res.status(200).json(rest);
+//         } else { // guest
+//             return res.status(200).json({
+//                 Name: bestMatch.Name,
+//                 ProfilePicture: bestMatch.ProfilePicture,
+//                 Description: bestMatch.Description
+//             });
+//         }
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// });
 
 // 8) Admin create wizkid (POST /create_wizkid)
 app.post('/create_wizkid', async (req, res) => {
