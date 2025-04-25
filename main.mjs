@@ -25,13 +25,34 @@ Each entry in the 'wiz' collection has the following structure:
 - Role - string - boss/developer/designer/intern
 - Email - string
 - Profile picture - string base64
+- Persona picture - string base64
 - Entry - string - date of addition
 - Exit - string - date of firing
+
+
+
+
+Ideas:
+
+- Give a free flow "Description" field, then given a "Query" the LLM can search for it across everyone
+
+- Given the free flow "Description" field, we create the image for you, the Persona picture :)
+
+
+
+
+
 
 `
 
 
 //
+
+app.use('/static', express.static(process.cwd()+'/static'))
+app.get('/', (req, res) => res.sendFile(process.cwd()+'/index.html'))
+
+//
+
 
 // 1) View all wizkids (GET /view_wizkids)
 app.get('/view_wizkids', async (req, res) => {
