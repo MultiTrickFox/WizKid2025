@@ -279,7 +279,7 @@ async function setupDefaultCollection() {
     }
 }
 
-setupDefaultCollection()
+//setupDefaultCollection()
 
 
 //
