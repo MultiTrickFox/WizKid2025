@@ -45,16 +45,11 @@ const USER2 = 'wizkid2'
 const PASS2 = 'pass456'
 
 
-
 // 1)  GET /view_wizkids
 
 async function ViewWizkids(user='', pass='') {
     return await request_helper('GET', '/view_wizkids', {user, pass});
 }
-ViewWizkids() // As a guest
-ViewWizkids(USER1, PASS1) // As a wizkid
-ViewWizkids(ADMIN_USER, ADMIN_PASS) // As an admin
-
 
 // 2)  PUT /update_wizkid (admin only)
 
@@ -63,8 +58,6 @@ async function UpdateWizkid(user=ADMIN_USER, pass=ADMIN_PASS, wizkidUser=USER1, 
     const body = { wizkidUser, ...updateData };
     return await request_helper('PUT', '/update_wizkid', headers, body);
 }
-UpdateWizkid()
-
 
 // 3)  PUT /update_own_info (wizkid only)
 
@@ -72,8 +65,6 @@ async function UpdateOwnInfo(user=USER2, pass=PASS2, updateData={'name':'MyNameI
     const headers = {'user': user, 'pass': pass };
     return await request_helper('PUT', '/update_own_info', headers, updateData);
 }
-UpdateOwnInfo()
-
 
 // 4)  DELETE /delete_wizkid (admin only)
 
@@ -82,8 +73,6 @@ async function DeleteWizkid(user=ADMIN_USER, pass=ADMIN_PASS, wizkidUser='wizkid
     const body = { wizkidUser };
     return await request_helper('DELETE', '/delete_wizkid', headers, body);
 }
-DeleteWizkid()
-
 
 // 5)  POST /fire_wizkid (admin only)
 
@@ -92,8 +81,6 @@ async function FireWizkid(user=ADMIN_USER, pass=ADMIN_PASS, wizkidUser='wizkid3'
     const body = { wizkidUser };
     return await request_helper('POST', '/fire_wizkid', headers, body);
 }
-FireWizkid()
-
 
 // 6)  POST /unfire_wizkid (admin only)
 
@@ -102,5 +89,4 @@ async function UnfireWizkid(user=ADMIN_USER, pass=ADMIN_PASS, wizkidUser='wizkid
     const body = { wizkidUser };
     return await request_helper('POST', '/unfire_wizkid', headers, body);
 }
-UnfireWizkid()
 

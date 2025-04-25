@@ -1,6 +1,5 @@
 
-
-# Each entry in the 'wiz' collection has the following structure:
+# 'wiz' collection structure, each entry has:
 
 - User - string
 - Pass - string
@@ -8,15 +7,15 @@
 - Type - string - admin/wizkid
 - Role - string - boss/developer/designer/intern
 - Email - string
-- Profile picture - string base64
-- Persona picture - string base64
+- ProfilePicture - string base64 image
 - Entry - string - date of addition
 - Exit - string - date of firing
 
 
 
-# main.js `setupDefaultCollection()` is for populating the database:
-creates 1 admin and 3 users -> 'admin'-'wowow' , 'wizkid1'-'pass123' , 'wizkid2'-'pass456', 'wizkid3'-'pass789'
+# main.js `setupDefaultCollection()`
+creates 1 admin and 3 users
+'admin'-'wowow' , 'wizkid1'-'pass123' , 'wizkid2'-'pass456', 'wizkid3'-'pass789'
 
 
 
