@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/MultiTrickFox/WizKid2025/issues"
   },
-  "homepage": "https://github.com/MultiTrickFox/WizKid2025#readme"
+  "homepage": "https://github.com/MultiTrickFox/WizKid2025#readme",
+  "dependencies": {
+    "express": "^5.1.0",
+    "mongodb": "^6.16.0"
+  }
 }
