@@ -10,17 +10,13 @@ const BASE_URL = 'https://run-fox-run-q28ow.ondigitalocean.app/'
 
 //
 
-async function sendRequest(method, endpoint, headers = {}, body = null) {
-
+async function request_helper(method, endpoint, headers={}, body=null) {
     let result = null
     let xhr = new XMLHttpRequest()
     xhr.open(method, `${BASE_URL}${endpoint}`, true)
     xhr.withCredentials = true
-
     Object.entries(headers).forEach(([key, value]) => { xhr.setRequestHeader(key, value) })
-
     if (body) { xhr.setRequestHeader('Content-Type', 'application/json') }
-
     xhr.onload = () => {
         try {
             result = JSON.parse(xhr.responseText)
@@ -28,15 +24,11 @@ async function sendRequest(method, endpoint, headers = {}, body = null) {
             result = { error: 'Failed to parse response', raw: xhr.responseText }
         }
     }
-
     xhr.onerror = () => {
         result = { error: 'Request failed', status: xhr.status };
     }
-
     xhr.send(body ? JSON.stringify(body) : null)
-
     while (result === null) { await sleep(0.1) }
-
     return result
 }
 
@@ -49,7 +41,7 @@ async function testViewWizkids(user='', pass='') {
         headers['user'] = user;
         headers['pass'] = pass;
     }
-    return await sendRequest('GET', '/view_wizkids', headers);
+    return await request_helper('GET', '/view_wizkids', headers);
 }
 
 // 2) Test PUT /update_wizkid (admin only)
@@ -62,7 +54,7 @@ async function testUpdateWizkid(wizkidUser, updateData) {
         wizkidUser,
         ...updateData
     };
-    return await sendRequest('PUT', '/update_wizkid', headers, body);
+    return await request_helper('PUT', '/update_wizkid', headers, body);
 }
 
 // 3) Test PUT /update_own_info (wizkid only)
@@ -71,7 +63,7 @@ async function testUpdateOwnInfo(updateData) {
         'user': WIZKID_USER,
         'pass': WIZKID_PASS
     };
-    return await sendRequest('PUT', '/update_own_info', headers, updateData);
+    return await request_helper('PUT', '/update_own_info', headers, updateData);
 }
 
 // 4) Test DELETE /delete_wizkid (admin only)
@@ -83,7 +75,7 @@ async function testDeleteWizkid(wizkidUser) {
     const body = {
         wizkidUser
     };
-    return await sendRequest('DELETE', '/delete_wizkid', headers, body);
+    return await request_helper('DELETE', '/delete_wizkid', headers, body);
 }
 
 // 5) Test POST /fire_wizkid (admin only)
@@ -95,7 +87,7 @@ async function testFireWizkid(wizkidUser) {
     const body = {
         wizkidUser
     };
-    return await sendRequest('POST', '/fire_wizkid', headers, body);
+    return await request_helper('POST', '/fire_wizkid', headers, body);
 }
 
 // 6) Test POST /unfire_wizkid (admin only)
@@ -107,7 +99,7 @@ async function testUnfireWizkid(wizkidUser) {
     const body = {
         wizkidUser
     };
-    return await sendRequest('POST', '/unfire_wizkid', headers, body);
+    return await request_helper('POST', '/unfire_wizkid', headers, body);
 }
 
 // Example usage (can be called in a browser console or Node.js environment with XMLHttpRequest)

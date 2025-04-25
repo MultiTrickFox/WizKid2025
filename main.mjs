@@ -202,6 +202,9 @@ async function setupDefaultCollection() {
         // Ensure unique index on User field
         await wiz_collection.createIndex({ User: 1 }, { unique: true });
 
+		// Placeholder Base64 for a 1x1 pixel image (to simulate ProfilePicture)
+		const placeholderProfilePicture = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
+
         // Admin user
         const admin = {
             User: 'admin',
