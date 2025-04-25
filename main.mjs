@@ -40,18 +40,18 @@ app.get('/view_wizkids', async (req, res) => {
         let userType = 'guest';
 
         if (req.headers['user'] && req.headers['pass']) {
-            const authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
+            let authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
             if (!authUser) {
                 throw new Error('Invalid credentials');
             }
             userType = authUser.Type;
         }
 
-        const wizkids = await db_wiz.find({}).toArray();
+        let wizkids = await db_wiz.find({}).toArray();
         
         if (userType == 'admin' || userType == 'wizkid') {
 			return res.status(200).json(wizkids.map(wizkid => {
-				const { Pass, ...rest } = wizkid;
+				let { Pass, ...rest } = wizkid;
 				return rest;
 			}));
         } else { // guest
@@ -70,14 +70,14 @@ app.get('/view_wizkids', async (req, res) => {
 app.put('/update_wizkid', async (req, res) => {
     try {
 
-        const authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
+        let authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
         if (!authUser || authUser.Type !== 'admin') {
             throw new Error('Only admins can update wizkid information');
         }
 
-        const { wizkidUser, ...updateData } = req.body;
+        let { wizkidUser, ...updateData } = req.body;
 
-        const result = await db_wiz.updateOne(
+        let result = await db_wiz.updateOne(
             { User: wizkidUser },
             { $set: { ...updateData, updatedAt: new Date().toISOString() } }
         );
@@ -96,21 +96,21 @@ app.put('/update_wizkid', async (req, res) => {
 app.put('/update_own_info', async (req, res) => {
     try {
 		
-        const authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
+        let authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
         if (!authUser || authUser.Type !== 'wizkid') {
             throw new Error('Only wizkids can update their own information');
         }
 
-        const updateData = req.body;
+        let updateData = req.body;
 
 		// Only allow updates to Name, Email, and ProfilePicture
-		const safeUpdateData = {};
+		let safeUpdateData = {};
 		if (updateData.Name) safeUpdateData.Name = updateData.Name;
 		if (updateData.Pass) safeUpdateData.Pass = updateData.Pass;
 		if (updateData.Email) safeUpdateData.Email = updateData.Email;
 		if (updateData.ProfilePicture) safeUpdateData.ProfilePicture = updateData.ProfilePicture;
 
-		const result = await db_wiz.updateOne(
+		let result = await db_wiz.updateOne(
 			{ User: req.headers['user'] },
 			{ $set: { ...safeUpdateData, updatedAt: new Date().toISOString() } }
 		);
@@ -129,14 +129,14 @@ app.put('/update_own_info', async (req, res) => {
 app.delete('/delete_wizkid', async (req, res) => {
     try {
 
-        const authUser = await db_wiz.findOne({ User: req.headers['user'],  Pass: req.headers['pass'] });
+        let authUser = await db_wiz.findOne({ User: req.headers['user'],  Pass: req.headers['pass'] });
         if (!authUser || authUser.Type !== 'admin') {
             throw new Error('Only admins can delete wizkids');
         }
 
-        const { wizkidUser } = req.body;
+        let { wizkidUser } = req.body;
 
-        const result = await db_wiz.deleteOne({ User: wizkidUser });
+        let result = await db_wiz.deleteOne({ User: wizkidUser });
 
         if (result.deletedCount === 0) {
             throw new Error('Wizkid not found');
@@ -152,14 +152,14 @@ app.delete('/delete_wizkid', async (req, res) => {
 app.post('/fire_wizkid', async (req, res) => {
     try {
 
-        const authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
+        let authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
         if (!authUser || authUser.Type !== 'admin') {
             throw new Error('Only admins can fire wizkids');
         }
 
-        const { wizkidUser } = req.body;
+        let { wizkidUser } = req.body;
 		
-        const result = await db_wiz.updateOne(
+        let result = await db_wiz.updateOne(
             { User: wizkidUser, Exit: { $exists: false } },
             { $set: { Exit: new Date().toISOString(), updatedAt: new Date().toISOString() } }
         );
@@ -178,14 +178,14 @@ app.post('/fire_wizkid', async (req, res) => {
 app.post('/unfire_wizkid', async (req, res) => {
     try {
 
-        const authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
+        let authUser = await db_wiz.findOne({ User: req.headers['user'], Pass: req.headers['pass'] });
         if (!authUser || authUser.Type !== 'admin') {
             throw new Error('Only admins can unfire wizkids');
         }
 
-        const { wizkidUser } = req.body;
+        let { wizkidUser } = req.body;
 
-        const result = await db_wiz.updateOne(
+        let result = await db_wiz.updateOne(
             { User: wizkidUser, Exit: { $exists: true } },
             { $unset: { Exit: "" }, $set: { updatedAt: new Date().toISOString() } }
         );
