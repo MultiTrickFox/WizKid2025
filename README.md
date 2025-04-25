@@ -1,12 +1,12 @@
 
 
 # The Stack
-`main.mjs` is a pure node.js + express + mongodb stack. With no middleware, and manual headers are handling.
-The stack is hosted on digitalocean at `https://run-fox-run-q28ow.ondigitalocean.app/`
+`main.mjs` is a pure node.js + express + mongodb stack.
+The dashboard is hosted on digitalocean at `https://run-fox-run-q28ow.ondigitalocean.app/`
 
 # How to Run
 1) `npm install` the packages
-2) make your your `env` has valid string secrets for: `mongo_connect`, `openai_key`
+2) make sure your `env` has valid secrets for: `mongo_connect`, `openai_key`
 3) run with `npm main.mjs`
 
 # Data Structure
@@ -29,11 +29,7 @@ The default users are:
 3) wizkid2-pass123
 ...
 
-# Backend.js
-For where the frontend meets the backend, See the `backend.js`
-This can be simply imported into an HTML and be used. The functions are available cleanly.
-
-# Ideas:
-- Give a free flow "Description" field, an external user can reach their personalized connection in the company.
-- Given the free flow "Description" field, we create an interesting avatar image for you, your Persona symbol :)
-
+# App Structure
+`main.mjs` is the backend
+`backend.js` is the middle-end for purely HTML importable functions.
+`index.html` and `test.html` are purely HTML - CSS - JS with Tailwind.
