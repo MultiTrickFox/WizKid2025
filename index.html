@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wizkid Home</title>
+    <title>Wizkid Panel</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -11,6 +11,10 @@
         #output {
             white-space: pre-wrap;
             font-family: monospace;
+        }
+        /* Style for collapsible sections */
+        .action-section:not(.open) .action-content {
+            display: none;
         }
     </style>
 </head>
@@ -34,11 +38,11 @@
     </div>
 
     <!-- Panel (hidden initially) -->
-    <div id="panel-container" class="hidden bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
+    <div id="panel-container" class="hidden bg-white p-6 rounded-lg shadow-md w-full max-w-3xl">
         <h1 class="text-2xl font-bold mb-4">Wizkid Panel</h1>
         <p id="user-role" class="text-lg mb-4"></p>
-        <div id="actions" class="space-y-2 mb-4"></div>
-        <div id="output" class="bg-gray-50 p-4 rounded-md border"></div>
+        <div id="actions" class="space-y-4 mb-4"></div>
+        <div id="output" class="bg-gray-50 p-4 rounded-md border min-h-[200px]"></div>
         <button id="logout" class="mt-4 bg-red-500 text-white p-2 rounded-md hover:bg-red-600">Logout</button>
     </div>
 
@@ -50,7 +54,8 @@
         let userState = {
             role: null, // 'admin', 'wizkid', or 'guest'
             username: null,
-            password: null
+            password: null,
+            wizkids: [] // Store list of wizkid users for dropdowns
         };
 
         // DOM elements
@@ -71,11 +76,14 @@
                 if (result.error) {
                     throw new Error(result.error);
                 }
-                // Determine role based on API response
+                // Store wizkid users for dropdowns (admin only)
+                if (username && result.find(user => user.User === username)?.Type === 'admin') {
+                    userState.wizkids = result.map(user => user.User).filter(user => user !== username);
+                }
+                // Determine role
                 if (!username) {
                     return 'guest';
                 }
-                // Check user type by querying with credentials
                 const userData = result.find(user => user.User === username);
                 if (!userData) {
                     throw new Error('User not found');
@@ -86,40 +94,66 @@
             }
         }
 
-        // Render panel based on user role
-        function renderPanel() {
-            loginContainer.classList.add('hidden');
-            panelContainer.classList.remove('hidden');
-            userRole.textContent = `Role: ${userState.role.charAt(0).toUpperCase() + userState.role.slice(1)}`;
-            actions.innerHTML = ''; // Clear previous actions
-
-            // Define available actions based on role
-            const actionButtons = {
-                guest: [
-                    { label: 'View Wizkids', fn: () => ViewWizkids() }
-                ],
-                wizkid: [
-                    { label: 'View Wizkids', fn: () => ViewWizkids(userState.username, userState.password) },
-                    { label: 'Update Own Info', fn: () => UpdateOwnInfo(userState.username, userState.password, { name: 'Updated Name', email: 'updated@example.com' }) }
-                ],
-                admin: [
-                    { label: 'View Wizkids', fn: () => ViewWizkids(userState.username, userState.password) },
-                    { label: 'Update Wizkid', fn: () => UpdateWizkid(userState.username, userState.password, 'wizkid1', { email: 'admin.updated@example.com' }) },
-                    { label: 'Update Own Info', fn: () => UpdateOwnInfo(userState.username, userState.password, { name: 'Admin Updated', email: 'admin@example.com' }) },
-                    { label: 'Fire Wizkid', fn: () => FireWizkid(userState.username, userState.password, 'wizkid3') },
-                    { label: 'Unfire Wizkid', fn: () => UnfireWizkid(userState.username, userState.password, 'wizkid3') },
-                    { label: 'Delete Wizkid', fn: () => DeleteWizkid(userState.username, userState.password, 'wizkid3') }
-                ]
+        // Create a collapsible action section
+        function createActionSection(label, content) {
+            const section = document.createElement('div');
+            section.className = 'action-section bg-gray-100 p-4 rounded-md';
+            section.innerHTML = `
+                <button class="w-full text-left font-medium text-blue-600 hover:text-blue-800">${label}</button>
+                <div class="action-content mt-2"></div>
+            `;
+            const button = section.querySelector('button');
+            const contentDiv = section.querySelector('.action-content');
+            contentDiv.appendChild(content);
+            button.onclick = () => {
+                section.classList.toggle('open');
             };
+            return section;
+        }
 
-            // Add buttons for the user’s role
-            actionButtons[userState.role].forEach(action => {
-                const button = document.createElement('button');
-                button.textContent = action.label;
-                button.className = 'w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600';
-                button.onclick = () => executeApiCall(action.label, action.fn);
-                actions.appendChild(button);
-            });
+        // Create input field
+        function createInput(id, label, type = 'text', placeholder = '') {
+            const div = document.createElement('div');
+            div.className = 'mb-2';
+            div.innerHTML = `
+                <label for="${id}" class="block text-sm font-medium text-gray-700">${label}</label>
+                <input type="${type}" id="${id}" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="${placeholder}">
+            `;
+            return div;
+        }
+
+        // Create textarea for description
+        function createTextarea(id, label) {
+            const div = document.createElement('div');
+            div.className = 'mb-2';
+            div.innerHTML = `
+                <label for="${id}" class="block text-sm font-medium text-gray-700">${label}</label>
+                <textarea id="${id}" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" placeholder="Enter description"></textarea>
+            `;
+            return div;
+        }
+
+        // Create select dropdown
+        function createSelect(id, label, options) {
+            const div = document.createElement('div');
+            div.className = 'mb-2';
+            div.innerHTML = `
+                <label for="${id}" class="block text-sm font-medium text-gray-700">${label}</label>
+                <select id="${id}" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="" disabled selected>Select a user</option>
+                    ${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                </select>
+            `;
+            return div;
+        }
+
+        // Create submit button
+        function createSubmitButton(label) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = label;
+            button.className = 'w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600';
+            return button;
         }
 
         // Execute API call and display result
@@ -134,6 +168,274 @@
             }
         }
 
+        // Render panel based on user role
+        async function renderPanel() {
+            loginContainer.classList.add('hidden');
+            panelContainer.classList.remove('hidden');
+            userRole.textContent = `Role: ${userState.role.charAt(0).toUpperCase() + userState.role.slice(1)}`;
+            actions.innerHTML = ''; // Clear previous actions
+
+            // Define actions with input forms
+            const actionsConfig = {
+                guest: [
+                    {
+                        label: 'View Wizkids',
+                        render: () => {
+                            const button = createSubmitButton('View Wizkids');
+                            button.onclick = () => executeApiCall('View Wizkids', () => ViewWizkids());
+                            return button;
+                        }
+                    },
+                    {
+                        label: 'Search Wizkids',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createInput('search-query', 'Search Query', 'text', 'Enter search query (e.g., machine learning)'));
+                            const button = createSubmitButton('Search');
+                            button.onclick = () => {
+                                const query = document.getElementById('search-query').value.trim();
+                                if (!query) {
+                                    output.textContent = 'Search Wizkids:\nError: Query is required\n\n';
+                                    return;
+                                }
+                                executeApiCall('Search Wizkids', () => SearchWizkids('', '', query));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    }
+                ],
+                wizkid: [
+                    {
+                        label: 'View Wizkids',
+                        render: () => {
+                            const button = createSubmitButton('View Wizkids');
+                            button.onclick = () => executeApiCall('View Wizkids', () => ViewWizkids(userState.username, userState.password));
+                            return button;
+                        }
+                    },
+                    {
+                        label: 'Update Own Info',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createInput('update-own-name', 'Name', 'text', 'Enter new name'));
+                            form.appendChild(createInput('update-own-email', 'Email', 'email', 'Enter new email'));
+                            form.appendChild(createTextarea('update-own-description', 'Description'));
+                            form.appendChild(createInput('update-own-picture', 'Profile Picture', 'text', 'Enter Base64 image'));
+                            const button = createSubmitButton('Update');
+                            button.onclick = () => {
+                                const updateData = {};
+                                const name = document.getElementById('update-own-name').value.trim();
+                                const email = document.getElementById('update-own-email').value.trim();
+                                const description = document.getElementById('update-own-description').value.trim();
+                                const picture = document.getElementById('update-own-picture').value.trim();
+                                if (name) updateData.name = name;
+                                if (email) updateData.email = email;
+                                if (description) updateData.Description = description;
+                                if (picture) {
+                                    if (!picture.startsWith('data:image/')) {
+                                        output.textContent = 'Update Own Info:\nError: Invalid Base64 image\n\n';
+                                        return;
+                                    }
+                                    updateData.profilePicture = picture;
+                                }
+                                if (Object.keys(updateData).length === 0) {
+                                    output.textContent = 'Update Own Info:\nError: At least one field is required\n\n';
+                                    return;
+                                }
+                                executeApiCall('Update Own Info', () => UpdateOwnInfo(userState.username, userState.password, updateData));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    },
+                    {
+                        label: 'Search Wizkids',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createInput('search-query-wizkid', 'Search Query', 'text', 'Enter search query (e.g., machine learning)'));
+                            const button = createSubmitButton('Search');
+                            button.onclick = () => {
+                                const query = document.getElementById('search-query-wizkid').value.trim();
+                                if (!query) {
+                                    output.textContent = 'Search Wizkids:\nError: Query is required\n\n';
+                                    return;
+                                }
+                                executeApiCall('Search Wizkids', () => SearchWizkids(userState.username, userState.password, query));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    }
+                ],
+                admin: [
+                    {
+                        label: 'View Wizkids',
+                        render: () => {
+                            const button = createSubmitButton('View Wizkids');
+                            button.onclick = () => executeApiCall('View Wizkids', () => ViewWizkids(userState.username, userState.password));
+                            return button;
+                        }
+                    },
+                    {
+                        label: 'Update Wizkid',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createSelect('update-wizkid-user', 'Target Wizkid', userState.wizkids));
+                            form.appendChild(createInput('update-wizkid-name', 'Name', 'text', 'Enter new name'));
+                            form.appendChild(createInput('update-wizkid-email', 'Email', 'email', 'Enter new email'));
+                            form.appendChild(createTextarea('update-wizkid-description', 'Description'));
+                            form.appendChild(createInput('update-wizkid-picture', 'Profile Picture', 'text', 'Enter Base64 image'));
+                            const button = createSubmitButton('Update');
+                            button.onclick = () => {
+                                const wizkidUser = document.getElementById('update-wizkid-user').value;
+                                const updateData = {};
+                                const name = document.getElementById('update-wizkid-name').value.trim();
+                                const email = document.getElementById('update-wizkid-email').value.trim();
+                                const description = document.getElementById('update-wizkid-description').value.trim();
+                                const picture = document.getElementById('update-wizkid-picture').value.trim();
+                                if (!wizkidUser) {
+                                    output.textContent = 'Update Wizkid:\nError: Target user is required\n\n';
+                                    return;
+                                }
+                                if (name) updateData.name = name;
+                                if (email) updateData.email = email;
+                                if (description) updateData.Description = description;
+                                if (picture) {
+                                    if (!picture.startsWith('data:image/')) {
+                                        output.textContent = 'Update Wizkid:\nError: Invalid Base64 image\n\n';
+                                        return;
+                                    }
+                                    updateData.profilePicture = picture;
+                                }
+                                if (Object.keys(updateData).length === 0) {
+                                    output.textContent = 'Update Wizkid:\nError: At least one field is required\n\n';
+                                    return;
+                                }
+                                executeApiCall('Update Wizkid', () => UpdateWizkid(userState.username, userState.password, wizkidUser, updateData));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    },
+                    {
+                        label: 'Update Own Info',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createInput('update-own-admin-name', 'Name', 'text', 'Enter new name'));
+                            form.appendChild(createInput('update-own-admin-email', 'Email', 'email', 'Enter new email'));
+                            form.appendChild(createTextarea('update-own-admin-description', 'Description'));
+                            form.appendChild(createInput('update-own-admin-picture', 'Profile Picture', 'text', 'Enter Base64 image'));
+                            const button = createSubmitButton('Update');
+                            button.onclick = () => {
+                                const updateData = {};
+                                const name = document.getElementById('update-own-admin-name').value.trim();
+                                const email = document.getElementById('update-own-admin-email').value.trim();
+                                const description = document.getElementById('update-own-admin-description').value.trim();
+                                const picture = document.getElementById('update-own-admin-picture').value.trim();
+                                if (name) updateData.name = name;
+                                if (email) updateData.email = email;
+                                if (description) updateData.Description = description;
+                                if (picture) {
+                                    if (!picture.startsWith('data:image/')) {
+                                        output.textContent = 'Update Own Info:\nError: Invalid Base64 image\n\n';
+                                        return;
+                                    }
+                                    updateData.profilePicture = picture;
+                                }
+                                if (Object.keys(updateData).length === 0) {
+                                    output.textContent = 'Update Own Info:\nError: At least one field is required\n\n';
+                                    return;
+                                }
+                                executeApiCall('Update Own Info', () => UpdateOwnInfo(userState.username, userState.password, updateData));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    },
+                    {
+                        label: 'Fire Wizkid',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createSelect('fire-wizkid-user', 'Target Wizkid', userState.wizkids));
+                            const button = createSubmitButton('Fire');
+                            button.onclick = () => {
+                                const wizkidUser = document.getElementById('fire-wizkid-user').value;
+                                if (!wizkidUser) {
+                                    output.textContent = 'Fire Wizkid:\nError: Target user is required\n\n';
+                                    return;
+                                }
+                                executeApiCall('Fire Wizkid', () => FireWizkid(userState.username, userState.password, wizkidUser));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    },
+                    {
+                        label: 'Unfire Wizkid',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createSelect('unfire-wizkid-user', 'Target Wizkid', userState.wizkids));
+                            const button = createSubmitButton('Unfire');
+                            button.onclick = () => {
+                                const wizkidUser = document.getElementById('unfire-wizkid-user').value;
+                                if (!wizkidUser) {
+                                    output.textContent = 'Unfire Wizkid:\nError: Target user is required\n\n';
+                                    return;
+                                }
+                                executeApiCall('Unfire Wizkid', () => UnfireWizkid(userState.username, userState.password, wizkidUser));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    },
+                    {
+                        label: 'Delete Wizkid',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createSelect('delete-wizkid-user', 'Target Wizkid', userState.wizkids));
+                            const button = createSubmitButton('Delete');
+                            button.onclick = () => {
+                                const wizkidUser = document.getElementById('delete-wizkid-user').value;
+                                if (!wizkidUser) {
+                                    output.textContent = 'Delete Wizkid:\nError: Target user is required\n\n';
+                                    return;
+                                }
+                                executeApiCall('Delete Wizkid', () => DeleteWizkid(userState.username, userState.password, wizkidUser));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    },
+                    {
+                        label: 'Search Wizkids',
+                        render: () => {
+                            const form = document.createElement('div');
+                            form.appendChild(createInput('search-query-admin', 'Search Query', 'text', 'Enter search query (e.g., machine learning)'));
+                            const button = createSubmitButton('Search');
+                            button.onclick = () => {
+                                const query = document.getElementById('search-query-admin').value.trim();
+                                if (!query) {
+                                    output.textContent = 'Search Wizkids:\nError: Query is required\n\n';
+                                    return;
+                                }
+                                executeApiCall('Search Wizkids', () => SearchWizkids(userState.username, userState.password, query));
+                            };
+                            form.appendChild(button);
+                            return form;
+                        }
+                    }
+                ]
+            };
+
+            // Render actions as collapsible sections
+            actionsConfig[userState.role].forEach(action => {
+                const content = action.render();
+                const section = createActionSection(action.label, content);
+                actions.appendChild(section);
+            });
+        }
+
         // Handle login form submission
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -145,7 +447,7 @@
                 userState.role = await authenticateUser(username, password);
                 userState.username = username;
                 userState.password = password;
-                renderPanel();
+                await renderPanel();
             } catch (error) {
                 loginError.textContent = error.message;
                 loginError.classList.remove('hidden');
@@ -158,7 +460,7 @@
                 userState.role = await authenticateUser('', '');
                 userState.username = null;
                 userState.password = null;
-                renderPanel();
+                await renderPanel();
             } catch (error) {
                 loginError.textContent = error.message;
                 loginError.classList.remove('hidden');
@@ -167,7 +469,7 @@
 
         // Handle logout
         logout.addEventListener('click', () => {
-            userState = { role: null, username: null, password: null };
+            userState = { role: null, username: null, password: null, wizkids: [] };
             panelContainer.classList.add('hidden');
             loginContainer.classList.remove('hidden');
             loginForm.reset();
