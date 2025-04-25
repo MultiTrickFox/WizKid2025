@@ -27,6 +27,16 @@ app.get('/', (req, res) => res.sendFile(process.cwd() + '/index.html'));
 app.get('/test.html', (req, res) => res.sendFile(process.cwd() + '/test.html'));
 app.get('/backend.js', (req, res) => res.sendFile(process.cwd() + '/backend.js'));
 
+// Utility function to validate URL
+function isValidUrl(string) {
+    try {
+        new URL(string);
+        return string.match(/^https?:\/\/[^\s/$.?#].[^\s]*$/i);
+    } catch (_) {
+        return false;
+    }
+}
+
 // 1) View all wizkids (GET /view_wizkids)
 app.get('/view_wizkids', async (req, res) => {
     try {
@@ -72,12 +82,9 @@ app.put('/update_wizkid', async (req, res) => {
             return res.status(400).json({ error: 'wizkidUser is required' });
         }
 
-        // Check ProfilePicture size if provided
-        if (updateData.ProfilePicture) {
-            const base64Size = Buffer.from(updateData.ProfilePicture, 'base64').length;
-            if (base64Size > 1 * 1024 * 1024) {
-                return res.status(400).json({ error: 'Profile picture exceeds 1MB limit' });
-            }
+        // Validate ProfilePicture URL if provided
+        if (updateData.ProfilePicture && !isValidUrl(updateData.ProfilePicture)) {
+            return res.status(400).json({ error: 'ProfilePicture must be a valid URL' });
         }
 
         let result = await db_wiz.updateOne(
@@ -111,9 +118,8 @@ app.put('/update_own_info', async (req, res) => {
         if (updateData.Pass) safeUpdateData.Pass = updateData.Pass;
         if (updateData.Email) safeUpdateData.Email = updateData.Email;
         if (updateData.ProfilePicture) {
-            const base64Size = Buffer.from(updateData.ProfilePicture, 'base64').length;
-            if (base64Size > 1 * 1024 * 1024) {
-                return res.status(400).json({ error: 'Profile picture exceeds 1MB limit' });
+            if (!isValidUrl(updateData.ProfilePicture)) {
+                return res.status(400).json({ error: 'ProfilePicture must be a valid URL' });
             }
             safeUpdateData.ProfilePicture = updateData.ProfilePicture;
         }
@@ -310,12 +316,9 @@ app.post('/create_wizkid', async (req, res) => {
             return res.status(400).json({ error: 'User already exists' });
         }
 
-        // Check ProfilePicture size if provided
-        if (ProfilePicture) {
-            const base64Size = Buffer.from(ProfilePicture, 'base64').length;
-            if (base64Size > 1 * 1024 * 1024) {
-                return res.status(400).json({ error: 'Profile picture exceeds 1MB limit' });
-            }
+        // Validate ProfilePicture URL if provided
+        if (ProfilePicture && !isValidUrl(ProfilePicture)) {
+            return res.status(400).json({ error: 'ProfilePicture must be a valid URL' });
         }
 
         // Create new wizkid
@@ -326,7 +329,7 @@ app.post('/create_wizkid', async (req, res) => {
             Type,
             Role,
             Email,
-            ProfilePicture: ProfilePicture || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==',
+            ProfilePicture: ProfilePicture || defaultProfilePicture,
             Description: Description || '',
             Entry: new Date().toISOString(),
             Exit: null,
@@ -343,6 +346,9 @@ app.post('/create_wizkid', async (req, res) => {
 
 // Setup default collection with users
 async function setupDefaultCollection() {
+
+	const defaultProfilePicture = 'https://images.unsplash.com/photo-1725958789276-5fcdabb0a8ca?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Zm94fGVufDB8fDB8fHww';
+
     try {
         const db = mongo_db;
         const wiz_collection = db.collection('wiz');
@@ -353,9 +359,6 @@ async function setupDefaultCollection() {
 
         // Ensure unique index on User field
         await wiz_collection.createIndex({ User: 1 }, { unique: true });
-
-        // Placeholder Base64 for a 1x1 pixel image
-        const placeholderProfilePicture = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
 
         // Current timestamp for Entry
         const now = new Date().toISOString();
@@ -368,7 +371,7 @@ async function setupDefaultCollection() {
             Type: 'admin',
             Role: 'boss',
             Email: 'admin@company.com',
-            ProfilePicture: placeholderProfilePicture,
+            ProfilePicture: defaultProfilePicture,
             Description: 'As the lead administrator, I oversee the entire Wizkid platform, managing user accounts and ensuring smooth operations. With a background in software engineering and project management, I specialize in coordinating teams, resolving technical issues, and implementing scalable solutions. My passion for technology drives me to foster a collaborative environment where innovation thrives.',
             Entry: now,
             Exit: null,
@@ -384,7 +387,7 @@ async function setupDefaultCollection() {
                 Type: 'wizkid',
                 Role: 'developer',
                 Email: 'alice.smith@company.com',
-                ProfilePicture: placeholderProfilePicture,
+                ProfilePicture: defaultProfilePicture,
                 Description: 'Alice is a senior full-stack developer with over 7 years of experience in building web applications. Proficient in JavaScript, React, and Node.js, she excels at creating scalable APIs and user-friendly interfaces. Her recent projects include a real-time collaboration tool and a machine learning dashboard. Outside work, Alice enjoys mentoring junior developers and contributing to open-source projects.',
                 Entry: now,
                 Exit: null,
@@ -397,7 +400,7 @@ async function setupDefaultCollection() {
                 Type: 'wizkid',
                 Role: 'designer',
                 Email: 'bob.johnson@company.com',
-                ProfilePicture: placeholderProfilePicture,
+                ProfilePicture: defaultProfilePicture,
                 Description: 'Bob is a creative UI/UX designer with a knack for crafting intuitive and visually appealing interfaces. With expertise in Figma, Adobe XD, and Tailwind CSS, he has designed user experiences for mobile apps and web platforms. Bob’s recent work includes a responsive e-commerce dashboard and a minimalist portfolio site. In his free time, he explores typography and color theory.',
                 Entry: now,
                 Exit: null,
@@ -410,7 +413,7 @@ async function setupDefaultCollection() {
                 Type: 'wizkid',
                 Role: 'intern',
                 Email: 'charlie.brown@company.com',
-                ProfilePicture: placeholderProfilePicture,
+                ProfilePicture: defaultProfilePicture,
                 Description: 'Charlie is a recent computer science graduate interning as a junior developer. Eager to learn, he has been contributing to backend services using Node.js and MongoDB. His internship project involves optimizing database queries for a user management system. Charlie is passionate about cloud computing and hopes to specialize in DevOps. He enjoys hackathons and tech meetups.',
                 Entry: now,
                 Exit: now, // Fired for testing
@@ -423,7 +426,7 @@ async function setupDefaultCollection() {
                 Type: 'wizkid',
                 Role: 'developer',
                 Email: 'diana.lee@company.com',
-                ProfilePicture: placeholderProfilePicture,
+                ProfilePicture: defaultProfilePicture,
                 Description: 'Diana is an experienced backend developer specializing in microservices and cloud architecture. With proficiency in Python, Docker, and AWS, she has built robust APIs for fintech applications. Her recent project involved integrating a payment gateway with real-time fraud detection. Diana is an advocate for clean code and frequently speaks at tech conferences.',
                 Entry: now,
                 Exit: null,
@@ -436,7 +439,7 @@ async function setupDefaultCollection() {
                 Type: 'wizkid',
                 Role: 'data scientist',
                 Email: 'evan.patel@company.com',
-                ProfilePicture: placeholderProfilePicture,
+                ProfilePicture: defaultProfilePicture,
                 Description: 'Evan is a data scientist with a PhD in machine learning, focusing on predictive analytics and natural language processing. Using Python, TensorFlow, and SQL, he has developed models for customer segmentation and sentiment analysis. His current project involves building a recommendation engine for a content platform. Evan enjoys teaching data science workshops.',
                 Entry: now,
                 Exit: null,
@@ -449,7 +452,7 @@ async function setupDefaultCollection() {
                 Type: 'wizkid',
                 Role: 'product manager',
                 Email: 'fiona.chen@company.com',
-                ProfilePicture: placeholderProfilePicture,
+                ProfilePicture: defaultProfilePicture,
                 Description: 'Fiona is a product manager with a background in software development and business strategy. She excels at bridging technical and business teams to deliver user-centric products. Her recent work includes launching a SaaS platform for small businesses. Fiona is skilled in Agile methodologies and enjoys analyzing market trends to inform product roadmaps.',
                 Entry: now,
                 Exit: null,

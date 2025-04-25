@@ -16,6 +16,19 @@
         .action-section:not(.open) .action-content {
             display: none;
         }
+        /* Hide full description by default */
+        .description-full {
+            display: none;
+        }
+        .description-full.open {
+            display: block;
+        }
+        .description-truncated {
+            display: block;
+        }
+        .description-truncated.open {
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
@@ -38,7 +51,7 @@
     </div>
 
     <!-- Panel (hidden initially) -->
-    <div id="panel-container" class="hidden bg-white p-6 rounded-lg shadow-md w-full max-w-3xl">
+    <div id="panel-container" class="hidden bg-white p-6 rounded-lg shadow-md w-full max-w-4xl">
         <h1 class="text-2xl font-bold mb-4">Wizkid Panel</h1>
         <p id="user-role" class="text-lg mb-4"></p>
         <div id="actions" class="space-y-4 mb-4"></div>
@@ -68,6 +81,9 @@
         const actions = document.getElementById('actions');
         const output = document.getElementById('output');
         const logout = document.getElementById('logout');
+
+        // Default profile picture URL
+        const defaultProfilePicture = 'https://images.unsplash.com/photo-1725958789276-5fcdabb0a8ca?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Zm94fGVufDB8fDB8fHww';
 
         // Authenticate user and determine role
         async function authenticateUser(username, password) {
@@ -156,11 +172,81 @@
             return button;
         }
 
+        // Validate URL
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return string.match(/^https?:\/\/[^\s/$.?#].[^\s]*$/i);
+            } catch (_) {
+                return false;
+            }
+        }
+
+        // Render wizkids as cards
+        function renderWizkids(wizkids) {
+            output.innerHTML = ''; // Clear output
+            if (!wizkids || wizkids.length === 0) {
+                output.textContent = 'No wizkids found';
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
+
+            wizkids.forEach((wizkid, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white shadow-md rounded-lg p-4';
+
+                // Truncate description if >150 characters
+                const description = wizkid.Description || '';
+                const isLongDescription = description.length > 150;
+                const truncatedDescription = isLongDescription ? description.slice(0, 150) + '...' : description;
+
+                card.innerHTML = `
+                    <div class="flex items-center mb-4">
+                        <img src="${wizkid.ProfilePicture || defaultProfilePicture}" alt="${wizkid.Name}'s profile picture" class="h-24 w-24 rounded-full object-cover mr-4" onerror="this.src='${defaultProfilePicture}'">
+                        <div>
+                            <h3 class="text-xl font-bold">${wizkid.Name || 'Unknown'}</h3>
+                            ${userState.role !== 'guest' ? `<p class="text-gray-600">${wizkid.Role || 'No role'}</p>` : ''}
+                        </div>
+                    </div>
+                    <p class="description-truncated ${isLongDescription ? '' : 'hidden'}" id="desc-truncated-${index}">${truncatedDescription}</p>
+                    <p class="description-full ${isLongDescription ? '' : 'open'}" id="desc-full-${index}">${description}</p>
+                    ${isLongDescription ? `<button class="text-blue-500 hover:underline read-more" data-index="${index}">Read More</button>` : ''}
+                    ${userState.role !== 'guest' ? `
+                        <p class="mt-2"><span class="font-medium">Email:</span> ${wizkid.Email || 'N/A'}</p>
+                        <p><span class="font-medium">Entry:</span> ${new Date(wizkid.Entry).toLocaleDateString()}</p>
+                        <p><span class="font-medium">Exit:</span> ${wizkid.Exit ? new Date(wizkid.Exit).toLocaleDateString() : 'Active'}</p>
+                    ` : ''}
+                `;
+
+                grid.appendChild(card);
+            });
+
+            output.appendChild(grid);
+
+            // Add event listeners for "Read More" buttons
+            document.querySelectorAll('.read-more').forEach(button => {
+                button.addEventListener('click', () => {
+                    const index = button.dataset.index;
+                    const truncated = document.getElementById(`desc-truncated-${index}`);
+                    const full = document.getElementById(`desc-full-${index}`);
+                    truncated.classList.toggle('open');
+                    full.classList.toggle('open');
+                    button.textContent = truncated.classList.contains('open') ? 'Read More' : 'Show Less';
+                });
+            });
+        }
+
         // Execute API call and display result
         async function executeApiCall(label, apiFn) {
             try {
                 const result = await apiFn();
-                output.textContent = `${label}:\n${JSON.stringify(result, null, 2)}\n\n`;
+                if (label === 'View Wizkids') {
+                    renderWizkids(result);
+                } else {
+                    output.textContent = `${label}:\n${JSON.stringify(result, null, 2)}\n\n`;
+                }
                 console.log(`${label}:`, result);
                 // Refresh wizkids list after create/delete
                 if ((label === 'Create Wizkid' || label === 'Delete Wizkid') && result.success) {
@@ -227,7 +313,7 @@
                             form.appendChild(createInput('update-own-Name', 'Name', 'text', 'Enter new Name'));
                             form.appendChild(createInput('update-own-Email', 'Email', 'email', 'Enter new Email'));
                             form.appendChild(createTextarea('update-own-Description', 'Description'));
-                            form.appendChild(createInput('update-own-ProfilePicture', 'Profile Picture', 'text', 'Enter Base64 image'));
+                            form.appendChild(createInput('update-own-ProfilePicture', 'Profile Picture', 'url', 'Enter image URL (optional)'));
                             const button = createSubmitButton('Update');
                             button.onclick = () => {
                                 const updateData = {};
@@ -239,8 +325,8 @@
                                 if (Email) updateData.Email = Email;
                                 if (Description) updateData.Description = Description;
                                 if (ProfilePicture) {
-                                    if (!ProfilePicture.startsWith('data:image/')) {
-                                        output.textContent = 'Update Own Info:\nError: Invalid Base64 image\n\n';
+                                    if (!isValidUrl(ProfilePicture)) {
+                                        output.textContent = 'Update Own Info:\nError: ProfilePicture must be a valid URL\n\n';
                                         return;
                                     }
                                     updateData.ProfilePicture = ProfilePicture;
@@ -293,7 +379,7 @@
                             form.appendChild(createSelect('create-wizkid-Type', 'Type', ['wizkid'], 'Select type'));
                             form.appendChild(createSelect('create-wizkid-Role', 'Role', ['developer', 'designer', 'intern', 'data scientist', 'product manager'], 'Select role'));
                             form.appendChild(createInput('create-wizkid-Email', 'Email', 'email', 'Enter email'));
-                            form.appendChild(createInput('create-wizkid-ProfilePicture', 'Profile Picture', 'text', 'Enter Base64 image (optional)'));
+                            form.appendChild(createInput('create-wizkid-ProfilePicture', 'Profile Picture', 'url', 'Enter image URL (optional)'));
                             form.appendChild(createTextarea('create-wizkid-Description', 'Description'));
                             const button = createSubmitButton('Create');
                             button.onclick = () => {
@@ -315,8 +401,8 @@
                                     return;
                                 }
                                 if (ProfilePicture) {
-                                    if (!ProfilePicture.startsWith('data:image/')) {
-                                        output.textContent = 'Create Wizkid:\nError: Invalid Base64 image\n\n';
+                                    if (!isValidUrl(ProfilePicture)) {
+                                        output.textContent = 'Create Wizkid:\nError: ProfilePicture must be a valid URL\n\n';
                                         return;
                                     }
                                     wizkidData.ProfilePicture = ProfilePicture;
@@ -336,7 +422,7 @@
                             form.appendChild(createInput('update-wizkid-Name', 'Name', 'text', 'Enter new Name'));
                             form.appendChild(createInput('update-wizkid-Email', 'Email', 'email', 'Enter new Email'));
                             form.appendChild(createTextarea('update-wizkid-Description', 'Description'));
-                            form.appendChild(createInput('update-wizkid-ProfilePicture', 'Profile Picture', 'text', 'Enter Base64 image'));
+                            form.appendChild(createInput('update-wizkid-ProfilePicture', 'Profile Picture', 'url', 'Enter image URL'));
                             const button = createSubmitButton('Update');
                             button.onclick = () => {
                                 const wizkidUser = document.getElementById('update-wizkid-user').value;
@@ -353,8 +439,8 @@
                                 if (Email) updateData.Email = Email;
                                 if (Description) updateData.Description = Description;
                                 if (ProfilePicture) {
-                                    if (!ProfilePicture.startsWith('data:image/')) {
-                                        output.textContent = 'Update Wizkid:\nError: Invalid Base64 image\n\n';
+                                    if (!isValidUrl(ProfilePicture)) {
+                                        output.textContent = 'Update Wizkid:\nError: ProfilePicture must be a valid URL\n\n';
                                         return;
                                     }
                                     updateData.ProfilePicture = ProfilePicture;
@@ -376,7 +462,7 @@
                             form.appendChild(createInput('update-own-admin-Name', 'Name', 'text', 'Enter new Name'));
                             form.appendChild(createInput('update-own-admin-Email', 'Email', 'email', 'Enter new Email'));
                             form.appendChild(createTextarea('update-own-admin-Description', 'Description'));
-                            form.appendChild(createInput('update-own-admin-ProfilePicture', 'Profile Picture', 'text', 'Enter Base64 image'));
+                            form.appendChild(createInput('update-own-admin-ProfilePicture', 'Profile Picture', 'url', 'Enter image URL'));
                             const button = createSubmitButton('Update');
                             button.onclick = () => {
                                 const updateData = {};
@@ -388,8 +474,8 @@
                                 if (Email) updateData.Email = Email;
                                 if (Description) updateData.Description = Description;
                                 if (ProfilePicture) {
-                                    if (!ProfilePicture.startsWith('data:image/')) {
-                                        output.textContent = 'Update Own Info:\nError: Invalid Base64 image\n\n';
+                                    if (!isValidUrl(ProfilePicture)) {
+                                        output.textContent = 'Update Own Info:\nError: ProfilePicture must be a valid URL\n\n';
                                         return;
                                     }
                                     updateData.ProfilePicture = ProfilePicture;
