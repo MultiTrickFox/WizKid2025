@@ -1,6 +1,7 @@
 import express from 'express';
 import mongodb from 'mongodb';
 import dotenv from 'dotenv';
+import axios from 'axios';
 import cors from 'cors';
 
 // Load environment variables
@@ -222,8 +223,6 @@ app.post('/unfire_wizkid', async (req, res) => {
 });
 
 // 7) Search wizkids by description (POST /search_wizkids)
-const axios = require('axios');
-
 app.post('/search_wizkids', async (req, res) => {
     try {
         let userType = 'guest';
