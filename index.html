@@ -4,12 +4,176 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wizkid Home</title>
-	<script src="/backend.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Ensure monospace for JSON output */
+        #output {
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
 </head>
-<body>
-  
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <!-- Login Form -->
+    <div id="login-container" class="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-4 text-center">Wizkid Panel Login</h1>
+        <div id="login-error" class="text-red-500 mb-4 hidden"></div>
+        <form id="login-form">
+            <div class="mb-4">
+                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                <input type="text" id="username" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter username">
+            </div>
+            <div class="mb-4">
+                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" id="password" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter password">
+            </div>
+            <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Login</button>
+        </form>
+        <button id="guest-login" class="w-full mt-2 bg-gray-500 text-white p-2 rounded-md hover:bg-gray-600">Login as Guest</button>
+    </div>
 
+    <!-- Panel (hidden initially) -->
+    <div id="panel-container" class="hidden bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
+        <h1 class="text-2xl font-bold mb-4">Wizkid Panel</h1>
+        <p id="user-role" class="text-lg mb-4"></p>
+        <div id="actions" class="space-y-2 mb-4"></div>
+        <div id="output" class="bg-gray-50 p-4 rounded-md border"></div>
+        <button id="logout" class="mt-4 bg-red-500 text-white p-2 rounded-md hover:bg-red-600">Logout</button>
+    </div>
 
+    <!-- Import backend.js -->
+    <script src="/backend.js"></script>
 
+    <script>
+        // User state
+        let userState = {
+            role: null, // 'admin', 'wizkid', or 'guest'
+            username: null,
+            password: null
+        };
+
+        // DOM elements
+        const loginContainer = document.getElementById('login-container');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const guestLogin = document.getElementById('guest-login');
+        const panelContainer = document.getElementById('panel-container');
+        const userRole = document.getElementById('user-role');
+        const actions = document.getElementById('actions');
+        const output = document.getElementById('output');
+        const logout = document.getElementById('logout');
+
+        // Authenticate user and determine role
+        async function authenticateUser(username, password) {
+            try {
+                const result = await ViewWizkids(username, password);
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                // Determine role based on API response
+                if (!username) {
+                    return 'guest';
+                }
+                // Check user type by querying with credentials
+                const userData = result.find(user => user.User === username);
+                if (!userData) {
+                    throw new Error('User not found');
+                }
+                return userData.Type; // 'admin' or 'wizkid'
+            } catch (error) {
+                throw new Error(error.message || 'Authentication failed');
+            }
+        }
+
+        // Render panel based on user role
+        function renderPanel() {
+            loginContainer.classList.add('hidden');
+            panelContainer.classList.remove('hidden');
+            userRole.textContent = `Role: ${userState.role.charAt(0).toUpperCase() + userState.role.slice(1)}`;
+            actions.innerHTML = ''; // Clear previous actions
+
+            // Define available actions based on role
+            const actionButtons = {
+                guest: [
+                    { label: 'View Wizkids', fn: () => ViewWizkids() }
+                ],
+                wizkid: [
+                    { label: 'View Wizkids', fn: () => ViewWizkids(userState.username, userState.password) },
+                    { label: 'Update Own Info', fn: () => UpdateOwnInfo(userState.username, userState.password, { name: 'Updated Name', email: 'updated@example.com' }) }
+                ],
+                admin: [
+                    { label: 'View Wizkids', fn: () => ViewWizkids(userState.username, userState.password) },
+                    { label: 'Update Wizkid', fn: () => UpdateWizkid(userState.username, userState.password, 'wizkid1', { email: 'admin.updated@example.com' }) },
+                    { label: 'Update Own Info', fn: () => UpdateOwnInfo(userState.username, userState.password, { name: 'Admin Updated', email: 'admin@example.com' }) },
+                    { label: 'Fire Wizkid', fn: () => FireWizkid(userState.username, userState.password, 'wizkid3') },
+                    { label: 'Unfire Wizkid', fn: () => UnfireWizkid(userState.username, userState.password, 'wizkid3') },
+                    { label: 'Delete Wizkid', fn: () => DeleteWizkid(userState.username, userState.password, 'wizkid3') }
+                ]
+            };
+
+            // Add buttons for the user’s role
+            actionButtons[userState.role].forEach(action => {
+                const button = document.createElement('button');
+                button.textContent = action.label;
+                button.className = 'w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600';
+                button.onclick = () => executeApiCall(action.label, action.fn);
+                actions.appendChild(button);
+            });
+        }
+
+        // Execute API call and display result
+        async function executeApiCall(label, apiFn) {
+            try {
+                const result = await apiFn();
+                output.textContent = `${label}:\n${JSON.stringify(result, null, 2)}\n\n`;
+                console.log(`${label}:`, result);
+            } catch (error) {
+                output.textContent = `${label}:\nError: ${error.message}\n\n`;
+                console.error(`${label} failed:`, error);
+            }
+        }
+
+        // Handle login form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            loginError.classList.add('hidden');
+
+            try {
+                userState.role = await authenticateUser(username, password);
+                userState.username = username;
+                userState.password = password;
+                renderPanel();
+            } catch (error) {
+                loginError.textContent = error.message;
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        // Handle guest login
+        guestLogin.addEventListener('click', async () => {
+            try {
+                userState.role = await authenticateUser('', '');
+                userState.username = null;
+                userState.password = null;
+                renderPanel();
+            } catch (error) {
+                loginError.textContent = error.message;
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        // Handle logout
+        logout.addEventListener('click', () => {
+            userState = { role: null, username: null, password: null };
+            panelContainer.classList.add('hidden');
+            loginContainer.classList.remove('hidden');
+            loginForm.reset();
+            loginError.classList.add('hidden');
+            output.textContent = '';
+        });
+    </script>
 </body>
 </html>

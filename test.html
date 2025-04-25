@@ -1,67 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-gray-900 text-gray-100 min-h-screen">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wizkid Test</title>
-    <script src="/backend.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wizkid Test</title>
+  <script src="/backend.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
+<body class="flex items-center justify-center p-6">
 
-    <h1>Wizkid API Test Results</h1>
-    <div id="results">Running tests...</div>
-    <style>
-        #results {
-            white-space: pre-wrap;
-        }
-    </style>
+  <div class="max-w-3xl w-full space-y-6">
+    <h1 class="text-3xl font-bold text-center text-indigo-400 drop-shadow">
+      🚀 Wizkid API Test Results
+    </h1>
 
-    <script>
-        
-        function showResult(testName, result) {
-            const resultsDiv = document.getElementById('results');
-            const resultStr = JSON.stringify(result, null, 2);
-            resultsDiv.textContent += `\n\n\n${testName}:\n${resultStr}\n\n`;
-            console.log(`${testName}:`, result);
-        }
+    <div id="results" class="bg-gray-800 border border-gray-700 rounded-xl p-6 font-mono text-sm whitespace-pre-wrap overflow-auto h-[500px] shadow-lg">
+      Running tests...
+    </div>
+  </div>
 
-        // Run all tests automatically on page load
-        window.onload = async () => {
-            try {
-                // Test 1: ViewWizkids as guest
-                showResult('ViewWizkids (Guest)', await ViewWizkids());
+  <script>
+    function showResult(testName, result) {
+      const resultsDiv = document.getElementById('results');
+      const resultStr = JSON.stringify(result, null, 2);
+      resultsDiv.textContent += `\n\n\n${testName}:\n${resultStr}\n\n`;
+      console.log(`${testName}:`, result);
+    }
 
-                // Test 2: ViewWizkids as wizkid
-                showResult('ViewWizkids (Wizkid)', await ViewWizkids(USER1, PASS1));
-
-                // Test 3: ViewWizkids as admin
-                showResult('ViewWizkids (Admin)', await ViewWizkids(ADMIN_USER, ADMIN_PASS));
-
-                // Test 4: UpdateWizkid (Admin)
-                showResult('UpdateWizkid', await UpdateWizkid());
-
-                // Test 5: UpdateOwnInfo (Wizkid)
-                showResult('UpdateOwnInfo', await UpdateOwnInfo());
-
-                // Test 6: FireWizkid (Admin)
-                showResult('FireWizkid', await FireWizkid());
-
-                // Test 7: UnfireWizkid (Admin)
-                showResult('UnfireWizkid', await UnfireWizkid());
-
-                // Test 8: DeleteWizkid (Admin) - Commented out as per original
-                // showResult('DeleteWizkid', await DeleteWizkid());
-
-                // Final message
-                showResult('Tests Completed', { message: 'All tests executed successfully' });
-            } catch (error) {
-                showResult('Error', { error: error.message });
-            }
-        };
-
-    </script>
+    window.onload = async () => {
+      try {
+        showResult('ViewWizkids (Guest)', await ViewWizkids());
+        showResult('ViewWizkids (Wizkid)', await ViewWizkids(USER1, PASS1));
+        showResult('ViewWizkids (Admin)', await ViewWizkids(ADMIN_USER, ADMIN_PASS));
+        showResult('UpdateWizkid', await UpdateWizkid());
+        showResult('UpdateOwnInfo', await UpdateOwnInfo());
+        showResult('FireWizkid', await FireWizkid());
+        showResult('UnfireWizkid', await UnfireWizkid());
+        // showResult('DeleteWizkid', await DeleteWizkid());
+        showResult('Tests Completed', { message: 'All tests executed successfully' });
+      } catch (error) {
+        showResult('Error', { error: error.message });
+      }
+    };
+  </script>
 
 </body>
 
