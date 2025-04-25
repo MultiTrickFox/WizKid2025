@@ -249,7 +249,7 @@ app.post('/search_wizkids', async (req, res) => {
         const descriptions = wizkids.map((w, i) => `#${i}: ${w.Description || 'No description'}`).join('\n');
 
         const prompt = `
-You are an intelligent assistant. Based on the following list of numbered wizkid descriptions, return the number of the one that best matches this query: "${query}". Respond with only the number, nothing else.
+You are an intelligent assistant. Based on the following list of numbered wizkid descriptions, return the number of the one that best matches this query: "${query}". Make sure you return at least one answer that's closest. Respond with only the number, nothing else.
 
 Descriptions:
 ${descriptions}
